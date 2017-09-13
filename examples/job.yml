@@ -1,0 +1,35 @@
+name: My first job
+description: We are going to use this to try a build
+phases:
+  prepare_config:
+    main:
+      type: log
+      config:
+  config:
+    main:
+      type: log
+      config:
+  prepare_build:
+    main:
+      type: log
+      config:
+  build:
+    main:
+      type: log
+      config:
+  post_build:
+    main:
+      type: log
+      config:
+  create_artifacts:
+    main:
+      type: log
+      config:
+  publish_artifacts:
+    main:
+      type: log
+      config:
+  finish:
+    main:
+      type: log
+      config:

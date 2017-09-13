@@ -1,0 +1,6 @@
+-sname erlci
+
+-setcookie erlci_cookie
+
++K true
++A30
