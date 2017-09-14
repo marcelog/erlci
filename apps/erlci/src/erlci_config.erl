@@ -31,19 +31,28 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([load/1, value/1]).
+-export([load/1]).
+-export([workspace/0]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc Returns a configuration value.
--spec value(erlci_config_key()) -> erlci_config_value().
-value(Key) ->
-  {ok, Config} = application:get_env(erlci, yaml_config),
-  erlci_yaml:field(Key, Config).
+%% @doc Returns the base workspace directory.
+-spec workspace() -> erlci_config_value().
+workspace() ->
+  value("workspace_dir").
 
 %% @doc Loads the main YAML configuration file.
 -spec load(erlci_filename()) -> ok.
 load(Filename) ->
   Config = erlci_yaml:read(Filename),
   ok = application:set_env(erlci, yaml_config, Config).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Private API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Returns a configuration value.
+-spec value(erlci_config_key()) -> erlci_config_value().
+value(Key) ->
+  {ok, Config} = application:get_env(erlci, yaml_config),
+  erlci_yaml:field(Config, Key).

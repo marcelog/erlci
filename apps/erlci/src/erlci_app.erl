@@ -36,6 +36,8 @@
   application:start_type(), term()
 ) -> {ok, pid()} | {ok, pid(), term()} | {error, term()}.
 start(_StartType, _StartArgs) ->
+  {ok, ConfigFile} = application:get_env(erlci, config),
+  ok = erlci_config:load(ConfigFile),
   erlci_sup:start_link().
 
 %% @doc http://erlang.org/doc/apps/kernel/application.html#Module:stop-1

@@ -4,6 +4,9 @@
 -define(PHASES, [
   prepare_config,
   config,
+  prepare_fetch_source,
+  fetch_source,
+  prepare_source,
   prepare_build,
   build,
   post_build,

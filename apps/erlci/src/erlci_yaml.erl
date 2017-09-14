@@ -40,6 +40,7 @@
 %% @doc Loads/pases a YAML file.
 -spec read(erlci_filename()) -> erlci_config().
 read(Filename) ->
+  lager:debug("Reading file ~p", [Filename]),
   [Doc|_] = yamerl_constr:file(Filename),
   Doc.
 

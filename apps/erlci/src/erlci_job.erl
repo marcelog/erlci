@@ -40,10 +40,11 @@
 -spec from_file(erlci_filename()) -> erlci_job().
 from_file(Filename) ->
   Doc = erlci_yaml:read(Filename),
+  JobName = erlci_yaml:field(Doc, "name"),
   Job = new(
-    erlci_yaml:field(Doc, "name"),
+    JobName,
     erlci_yaml:field(Doc, "description"),
-    ""
+    filename:join(erlci_config:workspace(), JobName)
   ),
   NewJob = lists:foldl(
     fun({Phase, Steps}, Acc) ->
