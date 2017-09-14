@@ -1,4 +1,4 @@
-%%% @doc Handles build-related stuff.
+%%% @doc Helper utils for the file system.
 %%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
@@ -17,7 +17,7 @@
 %%% @copyright Marcelo Gornstein <marcelog@gmail.com>
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
--module(erlci_build).
+-module(erlci_file).
 -author("marcelog@gmail.com").
 -github("https://github.com/marcelog").
 -homepage("http://marcelog.github.com/").
@@ -27,36 +27,43 @@
 %%% Includes.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -include("include/erlci.hrl").
+-include_lib("kernel/include/file.hrl").
+-import_record_info([{file, file_info}]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([new/1]).
+-export([create_dir/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc Creates a new build.
--spec new(erlci_job()) -> erlci_build().
-new(Job) ->
-  #{home := JobHome} = Job,
-  NextBuild = erlci_job:inc_build_number(Job),
-  Home = filename:join([JobHome, integer_to_list(NextBuild)]),
-  Build = #{
-    build_number => NextBuild,
-    job => Job,
-    home => Home,
-    phases => [],
-    result => in_progress
-  },
-  create_build_directory(Build),
-  Build.
+
+%% @doc Creates a directory, recursively.
+-spec create_dir(erlci_directory()) -> ok.
+create_dir(Path) ->
+  [First|Components] = filename:split(Path),
+  ok = create_dir(First, Components).
+
+create_dir(Path, []) ->
+  ok = test_and_create_dir(Path);
+
+create_dir(Path, [Next|Components]) ->
+  ok = test_and_create_dir(Path),
+  create_dir(filename:join([Path, Next]), Components).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc Creates the base directory for this build.
--spec create_build_directory(erlci_build()) -> ok.
-create_build_directory(Build) ->
-  #{home := BuildHome} = Build,
-  ok = erlci_file:create_dir(BuildHome).
+
+%% @doc Asserts that the given path is a directory by testing for existance and
+%% or creating it.
+-spec test_and_create_dir(erlci_directory()) -> ok | not_a_dir.
+test_and_create_dir(Path) ->
+  case file:read_file_info(Path) of
+    {ok, FileInfo} -> case FileInfo#file_info.type of
+      directory -> ok;
+      _ -> not_a_dir
+    end;
+    _ -> ok = file:make_dir(Path)
+  end.

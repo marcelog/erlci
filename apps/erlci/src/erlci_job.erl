@@ -32,7 +32,7 @@
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([new/3, from_file/1, add_step/5]).
--export([next_build_number/1]).
+-export([inc_build_number/1, next_build_number/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -96,12 +96,18 @@ add_step(Job, Phase, StepType, StepInstanceName, Config) ->
 
   Job#{phases := NewPhase}.
 
+%% @doc Increments the build number of a given job.
+inc_build_number(Job) ->
+  File = build_number_file(Job),
+  Next = next_build_number(Job),
+  ok = file:write_file(File, integer_to_binary(Next)),
+  Next.
+
 %% @doc Returns the next build number for this job.
 -spec next_build_number(erlci_job()) -> erlci_build_number().
 next_build_number(Job) ->
-  #{home := JobHome} = Job,
-  BuildNumberFile = filename:join([JobHome, "last_build.txt"]),
-  case file:read_file(BuildNumberFile) of
+  File = build_number_file(Job),
+  case file:read_file(File) of
     {ok, N} -> binary_to_integer(N) + 1;
     _ -> 1
   end.
@@ -125,3 +131,8 @@ get_steps(Job, Phase) ->
     Steps_ -> Steps_
   end.
 
+%% @doc Returns the full absolute path to the build number file of a given job.
+-spec build_number_file(erlci_job()) -> erlci_filename().
+build_number_file(Job) ->
+  #{home := JobHome} = Job,
+  filename:join([JobHome, "last_build.txt"]).
