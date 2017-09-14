@@ -1,4 +1,4 @@
-%%% @doc Sample plugin.
+%%% @doc Plugin behavior.
 %%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
@@ -17,36 +17,22 @@
 %%% @copyright Marcelo Gornstein <marcelog@gmail.com>
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
--module(erlci_plugin_log).
--author("marcelog@gmail.com").
--github("https://github.com/marcelog").
--homepage("http://marcelog.github.com/").
--license("Apache License 2.0").
-
--behavior(erlci_plugin_behavior).
+-module(erlci_plugin_behavior).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Includes.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -include("include/erlci.hrl").
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Exports.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([init/2, run/4]).
+-callback init(
+  erlci_job(),
+  erlci_step_config()
+) -> erlci_step_state().
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Public API.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--spec init(erlci_job(), erlci_job_config()) -> erlci_step_state().
-init(_Job, _Config) ->
-  #{}.
-
--spec run(
+-callback run(
   erlci_job(),
   erlci_phase_name(),
   erlci_step_config(),
   erlci_step_state()
 ) -> {erlci_build_result(), erlci_step_state()}.
-run(_Job, _Phase, _StepConfig, _StepState) ->
-  {success, #{}}.
+

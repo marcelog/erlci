@@ -6,5 +6,6 @@
 -include("step.hrl").
 -include("phase.hrl").
 -include("job.hrl").
+-include("build.hrl").
 
 -endif.
