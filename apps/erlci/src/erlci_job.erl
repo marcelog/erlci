@@ -32,6 +32,7 @@
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([new/3, from_file/1, add_step/5]).
+-export([next_build_number/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -94,6 +95,16 @@ add_step(Job, Phase, StepType, StepInstanceName, Config) ->
   NewPhase = maps:put(Phase, NewSteps, CurrentPhases),
 
   Job#{phases := NewPhase}.
+
+%% @doc Returns the next build number for this job.
+-spec next_build_number(erlci_job()) -> erlci_build_number().
+next_build_number(Job) ->
+  #{home := JobHome} = Job,
+  BuildNumberFile = filename:join([JobHome, "last_build.txt"]),
+  case file:read_file(BuildNumberFile) of
+    {ok, N} -> binary_to_integer(N) + 1;
+    _ -> 1
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.

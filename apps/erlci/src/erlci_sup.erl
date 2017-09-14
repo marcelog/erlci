@@ -47,7 +47,17 @@ start_link() ->
   term()
 ) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}} | ignore.
 init([]) ->
-  {ok, { {one_for_all, 0, 1}, []} }.
+  Children = [
+    {
+      erlci_build_monitor,
+      {erlci_build_monitor, start_link, []},
+      permanent,
+      brutal_kill,
+      worker,
+      []
+    }
+  ],
+  {ok, { {one_for_all, 0, 1}, Children} }.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
