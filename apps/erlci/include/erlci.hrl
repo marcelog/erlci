@@ -3,6 +3,8 @@
 
 -include("file.hrl").
 -include("config.hrl").
+-include("step.hrl").
 -include("phase.hrl").
+-include("job.hrl").
 
 -endif.

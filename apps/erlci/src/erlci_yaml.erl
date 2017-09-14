@@ -23,19 +23,35 @@
 -homepage("http://marcelog.github.com/").
 -license("Apache License 2.0").
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Includes.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -include("include/erlci.hrl").
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Exports.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([read/1, field/2, field/3]).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Public API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% @doc Loads/pases a YAML file.
 -spec read(erlci_filename()) -> erlci_config().
 read(Filename) ->
   [Doc|_] = yamerl_constr:file(Filename),
   Doc.
 
--spec field(erlci_config(), erlci_config_key()) -> erlci_config_value().
+%% @doc Returns the value of the given key or 'undefined'.
+-spec field(
+  erlci_config(), erlci_config_key()
+) -> erlci_config_value() | undefined.
 field(Doc, Name) ->
   field(Doc, Name, undefined).
 
+%% @doc Returns the value of the given key, using a default value if the key
+%% does not exist.
 -spec field(
   erlci_config(),
   erlci_config_key(),
@@ -43,3 +59,7 @@ field(Doc, Name) ->
 ) -> erlci_config_value().
 field(Doc, Name, Default) ->
   proplists:get_value(Name, Doc, Default).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Private API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -23,15 +23,26 @@
 -homepage("http://marcelog.github.com/").
 -license("Apache License 2.0").
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Includes.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -include("include/erlci.hrl").
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Exports.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([load/1, value/1]).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Public API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Returns a configuration value.
 -spec value(erlci_config_key()) -> erlci_config_value().
 value(Key) ->
   {ok, Config} = application:get_env(erlci, yaml_config),
   erlci_yaml:field(Key, Config).
 
+%% @doc Loads the main YAML configuration file.
 -spec load(erlci_filename()) -> ok.
 load(Filename) ->
   Config = erlci_yaml:read(Filename),

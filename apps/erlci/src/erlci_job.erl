@@ -23,8 +23,21 @@
 -homepage("http://marcelog.github.com/").
 -license("Apache License 2.0").
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Includes.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-include("include/erlci.hrl").
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Exports.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([new/3, from_file/1, add_step/5]).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Public API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Loads a job from a YAML file.
+-spec from_file(erlci_filename()) -> erlci_job().
 from_file(Filename) ->
   Doc = erlci_yaml:read(Filename),
   Job = new(
@@ -49,6 +62,10 @@ from_file(Filename) ->
   ),
   NewJob.
 
+%% @doc Creates a new job structure.
+-spec new(
+  erlci_job_name(), erlci_job_description(), erlci_job_home()
+) -> erlci_job().
 new(Name, Description, Home) ->
   #{
     name => Name,
@@ -58,6 +75,14 @@ new(Name, Description, Home) ->
     variables => #{}
   }.
 
+%% @doc Adds (appends) a new step to the given phase of the given job.
+-spec add_step(
+  erlci_job(),
+  erlci_phase_name(),
+  erlci_step_type(),
+  erlci_step_name(),
+  erlci_step_config()
+) -> erlci_job().
 add_step(Job, Phase, StepType, StepInstanceName, Config) ->
   Step = erlci_step:new(StepInstanceName, StepType, Config),
 
@@ -69,10 +94,18 @@ add_step(Job, Phase, StepType, StepInstanceName, Config) ->
 
   Job#{phases := NewPhase}.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Private API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Returns all the phases available for the given job.
+-spec get_phases(erlci_job()) -> map().
 get_phases(Job) ->
   #{phases := Phases} = Job,
   Phases.
 
+%% @doc Returns all the steps that are to be executed in order for the given
+%% phase.
+-spec get_steps(erlci_job(), erlci_phase_name()) -> [erlci_step()].
 get_steps(Job, Phase) ->
   CurrentPhases = get_phases(Job),
   case maps:get(Phase, CurrentPhases, phase_not_found) of
