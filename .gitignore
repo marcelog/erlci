@@ -1,3 +1,5 @@
+apps/erlci/.DS_Store
+apps/erlci/doc
 .rebar3
 _*
 .eunit
