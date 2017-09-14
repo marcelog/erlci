@@ -1,1 +1,2 @@
-workspace_dir: /tmp/erlci
+jobs_dir: /tmp/erlci/jobs
+workspace_dir: /tmp/erlci/workspace

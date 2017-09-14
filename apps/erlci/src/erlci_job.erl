@@ -45,7 +45,7 @@ from_file(Filename) ->
   Job = new(
     JobName,
     erlci_yaml:field(Doc, "description"),
-    filename:join(erlci_config:workspace(), JobName)
+    filename:join(erlci_config:workspace_dir(), JobName)
   ),
   NewJob = lists:foldl(
     fun({Phase, Steps}, Acc) ->

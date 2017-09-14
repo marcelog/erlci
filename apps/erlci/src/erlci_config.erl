@@ -32,15 +32,20 @@
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([load/1]).
--export([workspace/0]).
+-export([workspace_dir/0, jobs_dir/0]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc Returns the base workspace directory.
--spec workspace() -> erlci_config_value().
-workspace() ->
+-spec workspace_dir() -> erlci_config_value().
+workspace_dir() ->
   value("workspace_dir").
+
+%% @doc Returns the base jobs directory.
+-spec jobs_dir() -> erlci_config_value().
+jobs_dir() ->
+  value("jobs_dir").
 
 %% @doc Loads the main YAML configuration file.
 -spec load(erlci_filename()) -> ok.
