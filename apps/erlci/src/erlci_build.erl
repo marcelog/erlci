@@ -40,7 +40,7 @@
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc Creates a new build.
--spec new(erlci_job()) -> ok.
+-spec new(erlci_job()) -> erlci_build().
 new(Job) ->
   #{home := JobHome} = Job,
   NextBuild = erlci_job:next_build_number(Job),
