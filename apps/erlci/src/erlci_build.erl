@@ -92,11 +92,15 @@ init([Caller, Build]) ->
   Me = self(),
   #{job := Job} = Build,
   Caller ! {build_started, Me, Build},
+  Me ! {start},
   {ok, #{
     me => Me,
     job => Job,
     build => Build,
-    caller => Caller
+    caller => Caller,
+    current_phase => undefined,
+    phases => [],
+    steps => []
   }}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_call-3
@@ -117,6 +121,50 @@ handle_cast(Message, State) ->
 -spec handle_info(
   term(), state()
 ) -> {noreply, state()} | {stop, term(), state()}.
+handle_info({start}, State) ->
+  #{job := Job} = State,
+  #{name := JobName} = Job,
+  self() ! {next_phase},
+  lager:debug("Running phases for ~p", [JobName]),
+  {noreply, State#{phases := ?PHASES}};
+
+handle_info({next_phase}, State = #{phases := []}) ->
+  #{job := Job} = State,
+  #{name := JobName} = Job,
+  lager:debug("No more phases for ~p", [JobName]),
+  {stop, normal, State};
+
+handle_info({next_phase}, State) ->
+  #{job := Job, phases := [Phase|NextPhases]} = State,
+  #{name := JobName} = Job,
+  lager:debug("Running phase ~p for ~p", [Phase, JobName]),
+  Steps = erlci_job:get_steps(Job, erlang:atom_to_list(Phase)),
+  self() ! {next_step},
+  {noreply, State#{
+    steps := Steps,
+    current_phase := Phase,
+    phases := NextPhases
+  }};
+
+handle_info({next_step}, State = #{steps := []}) ->
+  #{job := Job, current_phase := CurrentPhase} = State,
+  #{name := JobName} = Job,
+  lager:debug("No more steps for ~p of ~p", [CurrentPhase, JobName]),
+  self() ! {next_phase},
+  {noreply, State#{steps := [], current_phase := undefined}};
+
+handle_info({next_step}, State) ->
+  #{
+    job := Job,
+    current_phase := CurrentPhase,
+    steps := [Step|NextSteps]
+  } = State,
+  #{name := JobName} = Job,
+  #{name := StepName} = Step,
+  lager:debug("Running ~p:~p for ~p", [CurrentPhase, StepName, JobName]),
+  self() ! {next_step},
+  {noreply, State#{steps := NextSteps}};
+
 handle_info(Info, State) ->
   lager:warning("Build got unknown msg: ~p", [Info]),
   {noreply, State}.

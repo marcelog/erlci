@@ -33,6 +33,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([load/1]).
 -export([inc_build_number/1]).
+-export([get_steps/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -51,6 +52,15 @@ inc_build_number(Job) ->
   ok = file:write_file(File, integer_to_binary(Next)),
   Next.
 
+%% @doc Returns all the steps that are to be executed in order for the given
+%% phase.
+-spec get_steps(erlci_job(), erlci_phase_name()) -> [erlci_step()].
+get_steps(Job, Phase) ->
+  CurrentPhases = get_phases(Job),
+  case maps:get(Phase, CurrentPhases, phase_not_found) of
+    phase_not_found -> [];
+    Steps_ -> Steps_
+  end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -94,6 +104,12 @@ new(Name, Description, Home) ->
     variables => #{}
   }.
 
+%% @doc Returns all the phases available for the given job.
+-spec get_phases(erlci_job()) -> map().
+get_phases(Job) ->
+  #{phases := Phases} = Job,
+  Phases.
+
 %% @doc Adds (appends) a new step to the given phase of the given job.
 -spec add_step(
   erlci_job(),
@@ -112,22 +128,6 @@ add_step(Job, Phase, StepType, StepInstanceName, Config) ->
   NewPhase = maps:put(Phase, NewSteps, CurrentPhases),
 
   Job#{phases := NewPhase}.
-
-%% @doc Returns all the phases available for the given job.
--spec get_phases(erlci_job()) -> map().
-get_phases(Job) ->
-  #{phases := Phases} = Job,
-  Phases.
-
-%% @doc Returns all the steps that are to be executed in order for the given
-%% phase.
--spec get_steps(erlci_job(), erlci_phase_name()) -> [erlci_step()].
-get_steps(Job, Phase) ->
-  CurrentPhases = get_phases(Job),
-  case maps:get(Phase, CurrentPhases, phase_not_found) of
-    phase_not_found -> [];
-    Steps_ -> Steps_
-  end.
 
 %% @doc Returns the next build number for this job.
 -spec next_build_number(erlci_job()) -> erlci_build_number().
