@@ -31,11 +31,28 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([new/3, from_file/1, add_step/5]).
--export([inc_build_number/1, next_build_number/1]).
+-export([load/1]).
+-export([inc_build_number/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Loads a job from its config file located inside its base home directory.
+-spec load(erlci_job_name()) -> erlci_job().
+load(JobName) ->
+  BaseDir = erlci_config:jobs_dir(),
+  from_file(filename:join([BaseDir, JobName, "config.yml"])).
+
+%% @doc Increments the build number of a given job.
+-spec inc_build_number(erlci_job()) -> pos_integer().
+inc_build_number(Job) ->
+  File = build_number_file(Job),
+  Next = next_build_number(Job),
+  ok = file:write_file(File, integer_to_binary(Next)),
+  Next.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc Loads a job from a YAML file.
 -spec from_file(erlci_filename()) -> erlci_job().
@@ -45,7 +62,7 @@ from_file(Filename) ->
   Job = new(
     JobName,
     erlci_yaml:field(Doc, "description"),
-    filename:join(erlci_config:workspace_dir(), JobName)
+    filename:join(erlci_config:jobs_dir(), JobName)
   ),
   NewJob = lists:foldl(
     fun({Phase, Steps}, Acc) ->
@@ -53,7 +70,7 @@ from_file(Filename) ->
         fun({StepName, StepInfo}, Acc2) ->
           StepConfig = erlci_yaml:field(StepInfo, "config"),
           StepType = erlci_yaml:field(StepInfo, "type"),
-          erlci_job:add_step(Acc2, Phase, StepType, StepName, StepConfig)
+          add_step(Acc2, Phase, StepType, StepName, StepConfig)
         end,
         Acc,
         Steps
@@ -96,25 +113,6 @@ add_step(Job, Phase, StepType, StepInstanceName, Config) ->
 
   Job#{phases := NewPhase}.
 
-%% @doc Increments the build number of a given job.
-inc_build_number(Job) ->
-  File = build_number_file(Job),
-  Next = next_build_number(Job),
-  ok = file:write_file(File, integer_to_binary(Next)),
-  Next.
-
-%% @doc Returns the next build number for this job.
--spec next_build_number(erlci_job()) -> erlci_build_number().
-next_build_number(Job) ->
-  File = build_number_file(Job),
-  case file:read_file(File) of
-    {ok, N} -> binary_to_integer(N) + 1;
-    _ -> 1
-  end.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Private API.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc Returns all the phases available for the given job.
 -spec get_phases(erlci_job()) -> map().
 get_phases(Job) ->
@@ -129,6 +127,17 @@ get_steps(Job, Phase) ->
   case maps:get(Phase, CurrentPhases, phase_not_found) of
     phase_not_found -> [];
     Steps_ -> Steps_
+  end.
+
+%% @doc Returns the next build number for this job.
+-spec next_build_number(erlci_job()) -> erlci_build_number().
+next_build_number(Job) ->
+  #{name := Name} = Job,
+  File = build_number_file(Job),
+  lager:debug("Incrementing build number for: ~p at ~p", [Name, File]),
+  case file:read_file(File) of
+    {ok, N} -> binary_to_integer(N) + 1;
+    _ -> 1
   end.
 
 %% @doc Returns the full absolute path to the build number file of a given job.

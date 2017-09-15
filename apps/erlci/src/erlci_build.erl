@@ -47,33 +47,53 @@
   terminate/2
 ]).
 
+-export([create/1]).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc Starts the port monitor.
--spec start(map()) -> {ok, pid()}.
-start(Job) ->
+-spec start(erlci_build()) -> {ok, pid()}.
+start(Build) ->
+  #{job := Job, build_number := BuildNumber} = Build,
   #{name := JobName} = Job,
-  NextBuild = erlci_job:inc_build_number(Job),
   Name = list_to_atom(
-    string:join(["build", JobName, integer_to_list(NextBuild)], "_")
+    string:join([
+      erlci_config:workspace_dir(),
+      JobName,
+      integer_to_list(BuildNumber)
+    ], "_")
   ),
-  gen_server:start({local, Name}, ?MODULE, [self(), Job, NextBuild], []).
+  gen_server:start({local, Name}, ?MODULE, [self(), Build], []).
 
-%% @doc http://erlang.org/doc/man/gen_server.html#Module:init-1
--spec init([term()]) -> {ok, state()}.
-init([Caller, Job, BuildNumber]) ->
-  #{home := JobHome} = Job,
-  BuildHome = filename:join([JobHome, integer_to_list(BuildNumber)]),
+%% @doc Creates (but not runs) a new build for the given job.
+-spec create(erlci_job()) -> erlci_build().
+create(Job) ->
+  NextBuild = erlci_job:inc_build_number(Job),
+  #{name := JobName} = Job,
+  BuildHome = filename:join(
+    [erlci_config:workspace_dir(), JobName, integer_to_list(NextBuild)]
+  ),
   ok = erlci_file:create_dir(BuildHome),
-  Build = #{
-    build_number => BuildNumber,
+  #{
+    build_number => NextBuild,
     job => Job,
     home => BuildHome,
     phases => [],
-    result => in_progress
-  },
+    result => created
+  }.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% gen_server API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc http://erlang.org/doc/man/gen_server.html#Module:init-1
+-spec init([term()]) -> {ok, state()}.
+init([Caller, Build]) ->
+  Me = self(),
+  #{job := Job} = Build,
+  Caller ! {build_started, Me, Build},
   {ok, #{
+    me => Me,
     job => Job,
     build => Build,
     caller => Caller
@@ -108,8 +128,10 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:terminate-2
 -spec terminate(term(), state()) -> ok.
-terminate(Reason, _State) ->
+terminate(Reason, State) ->
+  #{caller := Caller, build := Build, me := Me} = State,
   lager:debug("Build finished: ~p", [Reason]),
+  Caller ! {build_finished, Me, Build},
   ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

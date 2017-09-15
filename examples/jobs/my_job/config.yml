@@ -1,4 +1,4 @@
-name: My first job
+name: my_job
 description: We are going to use this to try a build
 phases:
   prepare_config:

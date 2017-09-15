@@ -4,6 +4,9 @@ REBAR?=${ROOT}/rebar3.1
 
 all: clean dialyzer xref
 
+shell:
+	${REBAR} shell
+
 clean:
 	${REBAR} clean
 
