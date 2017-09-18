@@ -24,15 +24,10 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -include("include/erlci.hrl").
 
--callback init(
-  erlci_job(),
-  erlci_step_config()
-) -> erlci_step_state().
-
 -callback run(
   erlci_job(),
   erlci_phase_name(),
   erlci_step_config(),
   erlci_step_state()
-) -> {erlci_build_result(), erlci_step_state()}.
+) -> {erlci_build_status(), erlci_step_state()}.
 

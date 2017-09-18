@@ -33,7 +33,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([load/1]).
 -export([inc_build_number/1]).
--export([get_steps/2]).
+-export([name/1, home/1, steps/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -41,7 +41,7 @@
 %% @doc Loads a job from its config file located inside its base home directory.
 -spec load(erlci_job_name()) -> erlci_job().
 load(JobName) ->
-  BaseDir = erlci_config:jobs_dir(),
+  BaseDir = ?CFG:jobs_dir(),
   from_file(filename:join([BaseDir, JobName, "config.yml"])).
 
 %% @doc Increments the build number of a given job.
@@ -54,13 +54,27 @@ inc_build_number(Job) ->
 
 %% @doc Returns all the steps that are to be executed in order for the given
 %% phase.
--spec get_steps(erlci_job(), erlci_phase_name()) -> [erlci_step()].
-get_steps(Job, Phase) ->
-  CurrentPhases = get_phases(Job),
-  case maps:get(Phase, CurrentPhases, phase_not_found) of
+-spec steps(erlci_job(), erlci_phase_name()) -> [erlci_step()].
+steps(Job, Phase) ->
+  CurrentPhases = phases(Job),
+  PhaseString = erlang:atom_to_list(Phase),
+  case maps:get(PhaseString, CurrentPhases, phase_not_found) of
     phase_not_found -> [];
     Steps_ -> Steps_
   end.
+
+%% @doc Returns the name of the job.
+-spec name(erlci_job()) -> erlci_job_name().
+name(Job) ->
+  #{name := Name} = Job,
+  Name.
+
+%% @doc Returns the home of the job.
+-spec home(erlci_job()) -> erlci_job_home().
+home(Job) ->
+  #{home := Home} = Job,
+  Home.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -72,7 +86,7 @@ from_file(Filename) ->
   Job = new(
     JobName,
     erlci_yaml:field(Doc, "description"),
-    filename:join(erlci_config:jobs_dir(), JobName)
+    filename:join(?CFG:jobs_dir(), JobName)
   ),
   NewJob = lists:foldl(
     fun({Phase, Steps}, Acc) ->
@@ -105,8 +119,8 @@ new(Name, Description, Home) ->
   }.
 
 %% @doc Returns all the phases available for the given job.
--spec get_phases(erlci_job()) -> map().
-get_phases(Job) ->
+-spec phases(erlci_job()) -> map().
+phases(Job) ->
   #{phases := Phases} = Job,
   Phases.
 
@@ -121,8 +135,8 @@ get_phases(Job) ->
 add_step(Job, Phase, StepType, StepInstanceName, Config) ->
   Step = erlci_step:new(StepInstanceName, StepType, Config),
 
-  CurrentPhases = get_phases(Job),
-  CurrentSteps = get_steps(Job, Phase),
+  CurrentPhases = phases(Job),
+  CurrentSteps = steps(Job, Phase),
 
   NewSteps = lists:reverse([Step|CurrentSteps]),
   NewPhase = maps:put(Phase, NewSteps, CurrentPhases),
@@ -132,7 +146,7 @@ add_step(Job, Phase, StepType, StepInstanceName, Config) ->
 %% @doc Returns the next build number for this job.
 -spec next_build_number(erlci_job()) -> erlci_build_number().
 next_build_number(Job) ->
-  #{name := Name} = Job,
+  Name = name(Job),
   File = build_number_file(Job),
   lager:debug("Incrementing build number for: ~p at ~p", [Name, File]),
   case file:read_file(File) of
@@ -143,5 +157,5 @@ next_build_number(Job) ->
 %% @doc Returns the full absolute path to the build number file of a given job.
 -spec build_number_file(erlci_job()) -> erlci_filename().
 build_number_file(Job) ->
-  #{home := JobHome} = Job,
+  JobHome = home(Job),
   filename:join([JobHome, "last_build.txt"]).

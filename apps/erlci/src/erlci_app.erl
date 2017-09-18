@@ -25,7 +25,14 @@
 
 -behaviour(application).
 
-%% Application callbacks
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Includes.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-include("include/erlci.hrl").
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Exports.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([start/2, stop/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,7 +44,7 @@
 ) -> {ok, pid()} | {ok, pid(), term()} | {error, term()}.
 start(_StartType, _StartArgs) ->
   {ok, ConfigFile} = application:get_env(erlci, config),
-  ok = erlci_config:load(ConfigFile),
+  ok = ?CFG:load(ConfigFile),
   erlci_sup:start_link().
 
 %% @doc http://erlang.org/doc/apps/kernel/application.html#Module:stop-1

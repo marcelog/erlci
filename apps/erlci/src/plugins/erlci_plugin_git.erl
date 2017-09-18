@@ -1,4 +1,4 @@
-%%% @doc Sample plugin.
+%%% @doc Git plugin.
 %%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
@@ -17,7 +17,7 @@
 %%% @copyright Marcelo Gornstein <marcelog@gmail.com>
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
--module(erlci_plugin_log).
+-module(erlci_plugin_git).
 -author("marcelog@gmail.com").
 -github("https://github.com/marcelog").
 -homepage("http://marcelog.github.com/").

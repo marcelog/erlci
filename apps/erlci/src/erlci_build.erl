@@ -56,10 +56,10 @@
 -spec start(erlci_build()) -> {ok, pid()}.
 start(Build) ->
   #{job := Job, build_number := BuildNumber} = Build,
-  #{name := JobName} = Job,
+  JobName = ?JOB:name(Job),
   Name = list_to_atom(
     string:join([
-      erlci_config:workspace_dir(),
+      ?CFG:workspace_dir(),
       JobName,
       integer_to_list(BuildNumber)
     ], "_")
@@ -69,10 +69,10 @@ start(Build) ->
 %% @doc Creates (but not runs) a new build for the given job.
 -spec create(erlci_job()) -> erlci_build().
 create(Job) ->
-  NextBuild = erlci_job:inc_build_number(Job),
-  #{name := JobName} = Job,
+  NextBuild = ?JOB:inc_build_number(Job),
+  JobName = ?JOB:name(Job),
   BuildHome = filename:join(
-    [erlci_config:workspace_dir(), JobName, integer_to_list(NextBuild)]
+    [?CFG:workspace_dir(), JobName, integer_to_list(NextBuild)]
   ),
   ok = erlci_file:create_dir(BuildHome),
   #{
@@ -80,7 +80,7 @@ create(Job) ->
     job => Job,
     home => BuildHome,
     phases => [],
-    result => created
+    status => created
   }.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -122,23 +122,24 @@ handle_cast(Message, State) ->
   term(), state()
 ) -> {noreply, state()} | {stop, term(), state()}.
 handle_info({start}, State) ->
-  #{job := Job} = State,
-  #{name := JobName} = Job,
+  #{job := Job, build := Build} = State,
+  JobName = ?JOB:name(Job),
   self() ! {next_phase},
   lager:debug("Running phases for ~p", [JobName]),
-  {noreply, State#{phases := ?PHASES}};
+  NewBuild = status_in_progress(Build),
+  {noreply, State#{phases := ?PHASES, build := NewBuild}};
 
 handle_info({next_phase}, State = #{phases := []}) ->
-  #{job := Job} = State,
-  #{name := JobName} = Job,
+  #{job := Job, build := Build} = State,
+  JobName = ?JOB:name(Job),
   lager:debug("No more phases for ~p", [JobName]),
-  {stop, normal, State};
+  {stop, normal, State#{build := status_success(Build)}};
 
 handle_info({next_phase}, State) ->
   #{job := Job, phases := [Phase|NextPhases]} = State,
-  #{name := JobName} = Job,
+  JobName = ?JOB:name(Job),
   lager:debug("Running phase ~p for ~p", [Phase, JobName]),
-  Steps = erlci_job:get_steps(Job, erlang:atom_to_list(Phase)),
+  Steps = ?JOB:steps(Job, Phase),
   self() ! {next_step},
   {noreply, State#{
     steps := Steps,
@@ -148,7 +149,7 @@ handle_info({next_phase}, State) ->
 
 handle_info({next_step}, State = #{steps := []}) ->
   #{job := Job, current_phase := CurrentPhase} = State,
-  #{name := JobName} = Job,
+  JobName = ?JOB:name(Job),
   lager:debug("No more steps for ~p of ~p", [CurrentPhase, JobName]),
   self() ! {next_phase},
   {noreply, State#{steps := [], current_phase := undefined}};
@@ -157,13 +158,32 @@ handle_info({next_step}, State) ->
   #{
     job := Job,
     current_phase := CurrentPhase,
-    steps := [Step|NextSteps]
+    steps := [Step|NextSteps],
+    build := Build
   } = State,
-  #{name := JobName} = Job,
-  #{name := StepName} = Step,
+  JobName = ?JOB:name(Job),
+  #{
+    name := StepName,
+    type := StepType,
+    config := StepConfig
+  } = Step,
   lager:debug("Running ~p:~p for ~p", [CurrentPhase, StepName, JobName]),
-  self() ! {next_step},
-  {noreply, State#{steps := NextSteps}};
+  Module = list_to_atom(string:join(["erlci", "plugin", StepType], "_")),
+  try
+    case erlang:apply(Module, run, [Job, CurrentPhase, StepConfig, #{}]) of
+      {success, _} ->
+        self() ! {next_step},
+        {noreply, State#{steps := NextSteps}};
+      {failed, _} -> {stop, normal, State#{
+        build := status_failed(Build)
+      }}
+    end
+  catch
+    _:E -> {stop, E, State#{build := status_failed(Build)}}
+  end;
+
+handle_info({exec_out, Data}, State) ->
+  {noreply, State};
 
 handle_info(Info, State) ->
   lager:warning("Build got unknown msg: ~p", [Info]),
@@ -185,3 +205,22 @@ terminate(Reason, State) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Marks the build as in progress.
+-spec status_in_progress(erlci_build()) -> erlci_build().
+status_in_progress(Build) ->
+  update_status(Build, in_progress).
+
+%% @doc Marks the build as failed.
+-spec status_failed(erlci_build()) -> erlci_build().
+status_failed(Build) ->
+  update_status(Build, failed).
+
+%% @doc Marks the build as success.
+-spec status_success(erlci_build()) -> erlci_build().
+status_success(Build) ->
+  update_status(Build, success).
+
+%% @doc Changes the build status
+-spec update_status(erlci_build(), erlci_build_status()) -> erlci_build().
+update_status(Build, Status) ->
+  Build#{status := Status}.

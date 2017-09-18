@@ -1,6 +1,7 @@
 -ifndef(erlci_hrl).
 -define(erlci_hrl, true).
 
+-include("shortcuts.hrl").
 -include("file.hrl").
 -include("config.hrl").
 -include("step.hrl").

@@ -80,9 +80,9 @@ init([]) ->
 handle_call({start_build, JobName}, _From, State) ->
   #{monitor_refs := MonitorRefs} = State,
   {Result, NewState} = try
-    Job = erlci_job:load(JobName),
-    Build = erlci_build:create(Job),
-    {ok, BuildPid} = erlci_build:start(Build),
+    Job = ?JOB:load(JobName),
+    Build = ?BUILD:create(Job),
+    {ok, BuildPid} = ?BUILD:start(Build),
     BuildRef = erlang:monitor(process, BuildPid),
     NewMonitorRefs = [{BuildRef, BuildPid, Build}|MonitorRefs],
     {{ok, Build}, State#{monitor_refs := NewMonitorRefs}}
@@ -114,13 +114,13 @@ handle_info({'DOWN', BuildRef, process, BuildPid, Info}, State) ->
 
 handle_info({build_started, BuildPid, Build}, State) ->
   #{monitor_refs := MonitorRefs} = State,
-  {BuildRef, BuildPid, _Build} = find_build(BuildPid, MonitorRefs),
+  {_BuildRef, BuildPid, _Build} = find_build(BuildPid, MonitorRefs),
   lager:info("Build Started with pid (~p): ~p", [BuildPid, Build]),
   {noreply, State};
 
 handle_info({build_finished, BuildPid, Build}, State) ->
   #{monitor_refs := MonitorRefs} = State,
-  {BuildRef, BuildPid, _Build} = find_build(BuildPid, MonitorRefs),
+  {_BuildRef, BuildPid, _Build} = find_build(BuildPid, MonitorRefs),
   lager:info("Build Finished with pid (~p): ~p", [BuildPid, Build]),
   {noreply, State};
 
@@ -148,10 +148,10 @@ terminate(_Reason, _State) ->
 find_build(_RefOrPid, []) ->
   undefined;
 
-find_build(Ref, [Result = {Ref, _Pid, Build}|_]) ->
+find_build(Ref, [Result = {Ref, _Pid, _Build}|_]) ->
   Result;
 
-find_build(Pid, [Result = {_Ref, Pid, Build}|_]) ->
+find_build(Pid, [Result = {_Ref, Pid, _Build}|_]) ->
   Result;
 
 find_build(RefOrPid, [_|NextRefs]) ->
