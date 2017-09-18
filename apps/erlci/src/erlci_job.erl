@@ -55,9 +55,9 @@ inc_build_number(Job) ->
 %% @doc Returns all the steps that are to be executed in order for the given
 %% phase.
 -spec steps(erlci_job(), erlci_phase_name()) -> [erlci_step()].
-steps(Job, Phase) ->
+steps(Job, PhaseString) ->
   CurrentPhases = phases(Job),
-  PhaseString = erlang:atom_to_list(Phase),
+  %PhaseString = erlang:atom_to_list(Phase),
   case maps:get(PhaseString, CurrentPhases, phase_not_found) of
     phase_not_found -> [];
     Steps_ -> Steps_

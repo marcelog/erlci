@@ -74,9 +74,11 @@ create(Job) ->
   BuildHome = filename:join(
     [?CFG:workspace_dir(), JobName, integer_to_list(NextBuild)]
   ),
+  Logfile = filename:join([BuildHome, "log.txt"]),
   ok = erlci_file:create_dir(BuildHome),
   #{
     build_number => NextBuild,
+    log => Logfile,
     job => Job,
     home => BuildHome,
     phases => [],
@@ -90,11 +92,16 @@ create(Job) ->
 -spec init([term()]) -> {ok, state()}.
 init([Caller, Build]) ->
   Me = self(),
-  #{job := Job} = Build,
+  #{job := Job, log := Log} = Build,
+  Hash = erlang:phash2(Build),
+  ok = lager:md([{build_hash, Hash}]),
+  {ok, Trace} = lager:trace_file(Log, [{build_hash, Hash}], debug),
   Caller ! {build_started, Me, Build},
   Me ! {start},
   {ok, #{
     me => Me,
+    build_hash => Hash,
+    build_trace => Trace,
     job => Job,
     build => Build,
     caller => Caller,
@@ -197,14 +204,33 @@ code_change(_OldVsn, State, _Extra) ->
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:terminate-2
 -spec terminate(term(), state()) -> ok.
 terminate(Reason, State) ->
-  #{caller := Caller, build := Build, me := Me} = State,
-  lager:debug("Build finished: ~p", [Reason]),
+  #{
+    caller := Caller,
+    build := Build,
+    me := Me,
+    build_trace := Trace,
+    build_hash := Hash
+  } = State,
+  lager:debug([{build_hash, Hash}], "Build finished: ~p", [Reason]),
+  ok = lager:stop_trace(Trace),
   Caller ! {build_finished, Me, Build},
   ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Returns the log filename for the given build.
+%-spec log(erlci_build()) -> erlci_filename().
+%log(Build) ->
+%  Home = home(Build),
+%  filename:join([Home, "log.txt"]).
+%
+%% @doc Returns the home directory of the build.
+%-spec home(erlci_build()) -> erlci_directory().
+%home(Build) ->
+%  #{home := Home} = Build,
+%  Home.
+
 %% @doc Marks the build as in progress.
 -spec status_in_progress(erlci_build()) -> erlci_build().
 status_in_progress(Build) ->
