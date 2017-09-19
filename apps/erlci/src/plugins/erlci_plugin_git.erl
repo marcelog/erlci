@@ -39,7 +39,7 @@
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([
-  start/0,
+  run/4,
   init/1,
   handle_call/3,
   handle_info/2,
@@ -51,30 +51,29 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc Starts the plugin.
--spec start() -> {ok, pid()}.
-start() ->
-  gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
-
 %% @doc Runs the plugin.
 -spec run(
   erlci_job(),
+  erlci_build(),
   erlci_phase_name(),
-  erlci_step_config(),
-  erlci_step_state()
-) -> {erlci_build_status(), erlci_step_state()}.
-run(_Job, _Phase, _StepConfig, _StepState) ->
-  %gen_server:cast
-  {success, #{}}.
+  erlci_step_config()
+) -> erlci_step_result().
+run(Job, Build, Phase, Config) ->
+  gen_server:start(
+    {local, ?MODULE}, ?MODULE, [Job, Build, Phase, Config], []
+  ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% gen_server API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:init-1
--spec init([]) -> {ok, state()}.
-init([]) ->
+-spec init([term()]) -> {ok, state()}.
+init([Job, Build, Phase, Config]) ->
   {ok, #{
-    monitor_refs => []
+    job => Job,
+    build => Build,
+    phase => Phase,
+    config => Config
   }}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_call-3

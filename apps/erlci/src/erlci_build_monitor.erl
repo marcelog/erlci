@@ -80,13 +80,9 @@ init([]) ->
 handle_call({start_build, JobName}, _From, State) ->
   #{monitor_refs := MonitorRefs} = State,
   {Result, NewState} = try
-  lager:debug("1"),
     Job = ?JOB:load(JobName),
-  lager:debug("2"),
     Build = ?BUILD:create(Job),
-  lager:debug("3"),
     {ok, BuildPid} = ?BUILD:start(Build),
-  lager:debug("4"),
     BuildRef = erlang:monitor(process, BuildPid),
     NewMonitorRefs = [{BuildRef, BuildPid, Build}|MonitorRefs],
     {{ok, Build}, State#{monitor_refs := NewMonitorRefs}}

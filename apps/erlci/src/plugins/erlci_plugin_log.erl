@@ -40,9 +40,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -spec run(
   erlci_job(),
+  erlci_build(),
   erlci_phase_name(),
-  erlci_step_config(),
-  erlci_step_state()
-) -> {erlci_build_status(), erlci_step_state()}.
-run(_Job, _Phase, _StepConfig, _StepState) ->
-  {success, #{}}.
+  erlci_step_config()
+) -> erlci_step_result().
+run(Job, Build, _Phase, _Config) ->
+  {success, Job, Build}.

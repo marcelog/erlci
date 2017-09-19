@@ -1,5 +1,7 @@
 %%% @doc Handles build-related stuff.
 %%%
+%%% @todo Try a gen_statem for this.
+%%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
 %%% Licensed under the Apache License, Version 2.0 (the "License");
@@ -106,6 +108,9 @@ init([Caller, Build]) ->
     build => Build,
     caller => Caller,
     current_phase => undefined,
+    current_step_module => undefined,
+    current_step_pid => undefined,
+    current_step_ref => undefined,
     phases => [],
     steps => []
   }}.
@@ -174,23 +179,51 @@ handle_info({next_step}, State) ->
     type := StepType,
     config := StepConfig
   } = Step,
-  lager:debug("Running ~p:~p for ~p", [CurrentPhase, StepName, JobName]),
-  Module = list_to_atom(string:join(["erlci", "plugin", StepType], "_")),
-  try
-    case erlang:apply(Module, run, [Job, CurrentPhase, StepConfig, #{}]) of
-      {success, _} ->
-        self() ! {next_step},
-        {noreply, State#{steps := NextSteps}};
-      {failed, _} -> {stop, normal, State#{
+  lager:debug("Starting ~p:~p for ~p", [CurrentPhase, StepName, JobName]),
+  StepModule = list_to_atom(string:join(["erlci", "plugin", StepType], "_")),
+  case erlang:apply(StepModule, run, [Job, Build, CurrentPhase, StepConfig]) of
+    Result = {_BuildStatus, _NewJob, _NewBuild} ->
+      handle_info(
+        {'DOWN', none, process, none, Result},
+        State#{
+          current_step_pid := none,
+          current_step_ref := none,
+          steps := NextSteps
+        }
+      );
+    {ok, StepPid} ->
+      StepRef = erlang:monitor(process, StepPid),
+      {noreply, State#{
+        steps := NextSteps,
+        current_step_module := StepModule,
+        current_step_pid := StepPid,
+        current_step_ref := StepRef
+      }};
+    StepError ->
+      lager:error("Step returned ~p", [StepError]),
+      {stop, normal, State#{
         build := status_failed(Build)
       }}
-    end
-  catch
-    _:E -> {stop, E, State#{build := status_failed(Build)}}
   end;
 
-handle_info({exec_out, Data}, State) ->
-  {noreply, State};
+handle_info(
+  {'DOWN', StepRef, process, StepPid, {BuildStatus, NewJob, NewBuild}},
+  State = #{current_step_ref := StepRef, current_step_pid := StepPid}
+) ->
+  lager:debug("Step finished ~p", [BuildStatus]),
+  case BuildStatus of
+    success ->
+      self() ! {next_step},
+      {noreply, State#{
+        build := NewBuild,
+        job := NewJob
+      }};
+    failed ->
+      {stop, normal, State#{
+        build := status_failed(NewBuild),
+        job := NewJob
+      }}
+  end;
 
 handle_info(Info, State) ->
   lager:warning("Build got unknown msg: ~p", [Info]),

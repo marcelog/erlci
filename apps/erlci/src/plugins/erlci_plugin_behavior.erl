@@ -26,8 +26,8 @@
 
 -callback run(
   erlci_job(),
+  erlci_build(),
   erlci_phase_name(),
-  erlci_step_config(),
-  erlci_step_state()
-) -> {erlci_build_status(), erlci_step_state()}.
+  erlci_step_config()
+) -> erlci_step_result().
 

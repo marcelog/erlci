@@ -8,4 +8,10 @@
 
 -type erlci_step() :: map().
 
+-type erlci_step_result() :: {ok, pid()} | {
+  erlci_build_status(),
+  erlci_job(),
+  erlci_build()
+}.
+
 -endif.
