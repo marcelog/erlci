@@ -107,17 +107,17 @@ handle_info({exec_out, Line}, State) ->
 
 handle_info(
   {'DOWN', Ref, process, Pid, normal},
-  State = #{ref := Ref, pid := Pid, job := Job, build := Build}
+  State = #{ref := Ref, pid := Pid}
 ) ->
-  {stop, {success, Job, Build}, State};
+  {stop, normal, State};
 
 handle_info(
   {'DOWN', Ref, process, Pid, {error, Code}},
-  State = #{ref := Ref, pid := Pid, job := Job, build := Build}
+  State = #{ref := Ref, pid := Pid}
 ) ->
   #{build_pid := BuildPid} = State,
   ?BUILD:log(BuildPid, error, "Git failed with status code: ~p", [Code]),
-  {stop, {failed, Job, Build}, State};
+  {stop, failed, State};
 
 handle_info(run, State) ->
   #{build := Build, config := Config} = State,
@@ -147,5 +147,12 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:terminate-2
 -spec terminate(term(), state()) -> ok.
-terminate(_Reason, _State) ->
+terminate(Reason, State) ->
+  #{build := Build, job := Job, build_pid := BuildPid} = State,
+  case Reason of
+    normal -> BuildPid ! {step_done, success, Job, Build};
+    E ->
+      ?BUILD:log(BuildPid, error, "~p", [E]),
+      BuildPid ! {step_done, failed, Job, Build}
+  end,
   ok.

@@ -94,7 +94,7 @@ handle_cast(Message, State) ->
   term(), state()
 ) -> {noreply, state()} | {stop, term(), state()}.
 handle_info(
-  {Port, {data, {eol, Data}}}, State = #{port := Port, caller := Caller}
+  {Port, {data, {_EolNoEol, Data}}}, State = #{port := Port, caller := Caller}
 ) ->
   Caller ! {exec_out, Data},
   {noreply, State};

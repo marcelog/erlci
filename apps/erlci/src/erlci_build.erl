@@ -69,7 +69,6 @@ start(Build) ->
   JobName = ?JOB:name(Job),
   Name = list_to_atom(
     string:join([
-      ?CFG:workspace_dir(),
       JobName,
       integer_to_list(BuildNumber)
     ], "_")
@@ -210,9 +209,9 @@ handle_info({next_step}, State) ->
   lager:debug("Starting ~p:~p for ~p", [CurrentPhase, StepName, JobName]),
   StepModule = list_to_atom(string:join(["erlci", "plugin", StepType], "_")),
   case erlang:apply(StepModule, run, [Job, Build, CurrentPhase, StepConfig]) of
-    Result = {_BuildStatus, _NewJob, _NewBuild} ->
+    {BuildStatus, NewJob, NewBuild} ->
       handle_info(
-        {'DOWN', none, process, none, Result},
+        {step_done, BuildStatus, NewJob, NewBuild},
         State#{
           current_step_pid := none,
           current_step_ref := none,
@@ -235,10 +234,8 @@ handle_info({next_step}, State) ->
   end;
 
 handle_info(
-  {'DOWN', StepRef, process, StepPid, {BuildStatus, NewJob, NewBuild}},
-  State = #{current_step_ref := StepRef, current_step_pid := StepPid}
+  {step_done, BuildStatus, NewJob, NewBuild}, State
 ) ->
-  lager:debug("Step finished ~p", [BuildStatus]),
   case BuildStatus of
     success ->
       self() ! {next_step},
@@ -252,6 +249,22 @@ handle_info(
         job := NewJob
       }}
   end;
+
+handle_info(
+  {'DOWN', StepRef, process, StepPid, normal},
+  State = #{current_step_ref := StepRef, current_step_pid := StepPid}
+) ->
+  {noreply, State};
+
+handle_info(
+  {'DOWN', StepRef, process, StepPid, Status},
+  State = #{current_step_ref := StepRef, current_step_pid := StepPid}
+) ->
+  #{build := Build} = State,
+  lager:debug("Step finished with error ~p", [Status]),
+  {stop, failed, State#{
+    build := status_failed(Build)
+  }};
 
 handle_info(Info, State) ->
   lager:warning("Build got unknown msg: ~p", [Info]),
