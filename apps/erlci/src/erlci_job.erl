@@ -80,19 +80,19 @@ home(Job) ->
 %% @doc Loads a job from a YAML file.
 -spec from_file(erlci_filename()) -> erlci_job().
 from_file(Filename) ->
-  Doc = erlci_yaml:read(Filename),
-  JobName = erlci_yaml:field(Doc, "name"),
+  Doc = ?YAML:read(Filename),
+  JobName = ?YAML:field(Doc, "name"),
   Job = new(
     JobName,
-    erlci_yaml:field(Doc, "description"),
+    ?YAML:field(Doc, "description"),
     filename:join(?CFG:jobs_dir(), JobName)
   ),
   NewJob = lists:foldl(
     fun({Phase, Steps}, Acc) ->
       lists:foldl(
         fun({StepName, StepInfo}, Acc2) ->
-          StepConfig = erlci_yaml:field(StepInfo, "config"),
-          StepType = erlci_yaml:field(StepInfo, "type"),
+          StepConfig = ?YAML:field(StepInfo, "config"),
+          StepType = ?YAML:field(StepInfo, "type"),
           add_step(Acc2, list_to_atom(Phase), StepType, StepName, StepConfig)
         end,
         Acc,
@@ -100,7 +100,7 @@ from_file(Filename) ->
       )
     end,
     Job,
-    erlci_yaml:field(Doc, "phases")
+    ?YAML:field(Doc, "phases")
   ),
   NewJob.
 

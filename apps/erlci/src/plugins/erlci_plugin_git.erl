@@ -60,7 +60,7 @@
 ) -> erlci_step_result().
 run(Job, Build, Phase, Config) ->
   gen_server:start(
-    {local, ?MODULE}, ?MODULE, [Job, Build, Phase, Config], []
+    {local, ?MODULE}, ?MODULE, [self(), Job, Build, Phase, Config], []
   ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -68,12 +68,16 @@ run(Job, Build, Phase, Config) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:init-1
 -spec init([term()]) -> {ok, state()}.
-init([Job, Build, Phase, Config]) ->
+init([BuildPid, Job, Build, Phase, Config]) ->
+  self() ! run,
   {ok, #{
+    build_pid => BuildPid,
     job => Job,
     build => Build,
     phase => Phase,
-    config => Config
+    config => Config,
+    pid => undefined,
+    ref => undefined
   }}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_call-3
@@ -81,17 +85,59 @@ init([Job, Build, Phase, Config]) ->
   term(), {pid(), term()}, state()
 ) -> {reply, term(), state()}.
 handle_call(Message, _From, State) ->
-  lager:warning("Got unknown request: ~p", [Message]),
+  #{build_pid := BuildPid} = State,
+  ?BUILD:log(BuildPid, warning, "Got unknown request: ~p", [Message]),
   {reply, not_implemented, State}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_cast-2
 -spec handle_cast(term(), state()) -> {noreply, state()}.
 handle_cast(Message, State) ->
-  lager:warning("Got unknown msg: ~p", [Message]),
+  #{build_pid := BuildPid} = State,
+  ?BUILD:log(BuildPid, warning, "Got unknown msg: ~p", [Message]),
   {noreply, State}.
 
+%% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_info-2
+-spec handle_info(
+  term(), state()
+) -> {noreply, state()} | {stop, term(), state()}.
+handle_info({exec_out, Line}, State) ->
+  #{build_pid := BuildPid} = State,
+  ?BUILD:log(BuildPid, info, Line, []),
+  {noreply, State};
+
+handle_info(
+  {'DOWN', Ref, process, Pid, normal},
+  State = #{ref := Ref, pid := Pid, job := Job, build := Build}
+) ->
+  {stop, {success, Job, Build}, State};
+
+handle_info(
+  {'DOWN', Ref, process, Pid, {error, Code}},
+  State = #{ref := Ref, pid := Pid, job := Job, build := Build}
+) ->
+  #{build_pid := BuildPid} = State,
+  ?BUILD:log(BuildPid, error, "Git failed with status code: ~p", [Code]),
+  {stop, {failed, Job, Build}, State};
+
+handle_info(run, State) ->
+  #{build := Build, config := Config} = State,
+  Executable = ?YAML:field(Config, "executable"),
+  Repository = ?YAML:field(Config, "repository"),
+  {ok, Pid} = ?EXEC:start(#{
+    cwd => ?BUILD:home(Build),
+    command => Executable,
+    args => ["clone", Repository],
+    env => #{}
+  }),
+  Ref = erlang:monitor(process, Pid),
+  {noreply, State#{
+    pid := Pid,
+    ref := Ref
+  }};
+
 handle_info(Info, State) ->
-  lager:warning("Got unknown msg: ~p", [Info]),
+  #{build_pid := BuildPid} = State,
+  ?BUILD:log(BuildPid, warning, "Got unknown msg: ~p", [Info]),
   {noreply, State}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:code_change-3

@@ -9,6 +9,12 @@ phases:
     main:
       type: log
       config:
+  fetch_source:
+    main:
+      type: git
+      config:
+        executable: /usr/local/bin/git
+        repository: https://github.com/marcelog/erlci
   prepare_build:
     main:
       type: log

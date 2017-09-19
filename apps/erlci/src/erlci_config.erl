@@ -50,7 +50,7 @@ jobs_dir() ->
 %% @doc Loads the main YAML configuration file.
 -spec load(erlci_filename()) -> ok.
 load(Filename) ->
-  Config = erlci_yaml:read(Filename),
+  Config = ?YAML:read(Filename),
   ok = application:set_env(erlci, yaml_config, Config).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -60,4 +60,4 @@ load(Filename) ->
 -spec value(erlci_config_key()) -> erlci_config_value().
 value(Key) ->
   {ok, Config} = application:get_env(erlci, yaml_config),
-  erlci_yaml:field(Config, Key).
+  ?YAML:field(Config, Key).

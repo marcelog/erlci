@@ -50,10 +50,18 @@
 ]).
 
 -export([create/1]).
+-export([log/4]).
+-export([home/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Returns the workspace/home directory for the given build.
+-spec home(erlci_build()) -> erlci_directory().
+home(Build) ->
+  #{home := Home} = Build,
+  Home.
+
 %% @doc Starts the port monitor.
 -spec start(erlci_build()) -> {ok, pid()}.
 start(Build) ->
@@ -67,6 +75,10 @@ start(Build) ->
     ], "_")
   ),
   gen_server:start({local, Name}, ?MODULE, [self(), Build], []).
+
+-spec log(pid(), atom(), string(), [term()]) -> ok.
+log(BuildPid, Level, Msg, Args) ->
+  gen_server:cast(BuildPid, {log, Level, Msg, Args}).
 
 %% @doc Creates (but not runs) a new build for the given job.
 -spec create(erlci_job()) -> erlci_build().
@@ -125,6 +137,22 @@ handle_call(Message, _From, State) ->
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_cast-2
 -spec handle_cast(term(), state()) -> {noreply, state()}.
+handle_cast({log, debug, Msg, Args}, State) ->
+  lager:debug(Msg, Args),
+  {noreply, State};
+
+handle_cast({log, info, Msg, Args}, State) ->
+  lager:info(Msg, Args),
+  {noreply, State};
+
+handle_cast({log, warning, Msg, Args}, State) ->
+  lager:warning(Msg, Args),
+  {noreply, State};
+
+handle_cast({log, error, Msg, Args}, State) ->
+  lager:error(Msg, Args),
+  {noreply, State};
+
 handle_cast(Message, State) ->
   lager:warning("Build got unknown msg: ~p", [Message]),
   {noreply, State}.
@@ -219,7 +247,7 @@ handle_info(
         job := NewJob
       }};
     failed ->
-      {stop, normal, State#{
+      {stop, failed, State#{
         build := status_failed(NewBuild),
         job := NewJob
       }}
