@@ -1,4 +1,4 @@
-%%% @doc Git plugin.
+%%% @doc Generic cmd plugin.
 %%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
@@ -17,7 +17,7 @@
 %%% @copyright Marcelo Gornstein <marcelog@gmail.com>
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
--module(erlci_plugin_git).
+-module(erlci_plugin_cmd).
 -author("marcelog@gmail.com").
 -github("https://github.com/marcelog").
 -homepage("http://marcelog.github.com/").
@@ -116,21 +116,35 @@ handle_info(
   State = #{ref := Ref, pid := Pid}
 ) ->
   #{build_pid := BuildPid} = State,
-  ?BUILD:log(BuildPid, error, "Git failed with status code: ~p", [Code]),
+  ?BUILD:log(BuildPid, error, "Shell failed with status code: ~p", [Code]),
   {stop, failed, State};
 
 handle_info(run, State) ->
   #{build := Build, config := Config, build_pid := BuildPid} = State,
+  Shell = ?YAML:field(Config, "shell"),
   Executable = ?YAML:field(Config, "executable"),
-  Repository = ?YAML:field(Config, "repository"),
-  ExecInfo = #{
+  Args = ?YAML:field(Config, "args"),
+
+  NewExecutable = case Shell of
+    undefined -> Executable;
+    Shell_ -> Shell_
+  end,
+
+  ?BUILD:log(BuildPid, info, "Running: ~p with ~p", [NewExecutable, Args]),
+
+  NewArgs = case Shell of
+    undefined -> Args;
+    _ -> ["-c", string:join([Executable|Args], " ")]
+  end,
+
+  ?BUILD:log(BuildPid, info, "Running: ~p with ~p", [NewExecutable, NewArgs]),
+
+  {ok, Pid} = ?EXEC:start(#{
     cwd => ?BUILD:home(Build),
-    command => Executable,
-    args => ["clone", Repository],
+    command => NewExecutable,
+    args => NewArgs,
     env => #{}
-  },
-  ?BUILD:log(BuildPid, info, "Running ~p", [ExecInfo]),
-  {ok, Pid} = ?EXEC:start(ExecInfo),
+  }),
   Ref = erlang:monitor(process, Pid),
   {noreply, State#{
     pid := Pid,

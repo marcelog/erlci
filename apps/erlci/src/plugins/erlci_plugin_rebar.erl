@@ -1,4 +1,4 @@
-%%% @doc Git plugin.
+%%% @doc Rebar plugin.
 %%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
@@ -17,7 +17,7 @@
 %%% @copyright Marcelo Gornstein <marcelog@gmail.com>
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
--module(erlci_plugin_git).
+-module(erlci_plugin_rebar).
 -author("marcelog@gmail.com").
 -github("https://github.com/marcelog").
 -homepage("http://marcelog.github.com/").
@@ -116,17 +116,17 @@ handle_info(
   State = #{ref := Ref, pid := Pid}
 ) ->
   #{build_pid := BuildPid} = State,
-  ?BUILD:log(BuildPid, error, "Git failed with status code: ~p", [Code]),
+  ?BUILD:log(BuildPid, error, "Rebar failed with status code: ~p", [Code]),
   {stop, failed, State};
 
-handle_info(run, State) ->
+handle_info(run, State = #{phase := fetch_dependencies}) ->
   #{build := Build, config := Config, build_pid := BuildPid} = State,
   Executable = ?YAML:field(Config, "executable"),
-  Repository = ?YAML:field(Config, "repository"),
+  SourceDir = ?YAML:field(Config, "source_directory"),
   ExecInfo = #{
-    cwd => ?BUILD:home(Build),
+    cwd => filename:join([?BUILD:home(Build), SourceDir]),
     command => Executable,
-    args => ["clone", Repository],
+    args => ["get-deps"],
     env => #{}
   },
   ?BUILD:log(BuildPid, info, "Running ~p", [ExecInfo]),

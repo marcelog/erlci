@@ -1,41 +1,25 @@
 name: my_job
 description: We are going to use this to try a build
 phases:
-  prepare_config:
-    main:
-      type: log
-      config:
-  config:
-    main:
-      type: log
-      config:
   fetch_source:
     main:
       type: git
       config:
         executable: /usr/local/bin/git
         repository: https://github.com/marcelog/erlci
-  prepare_build:
+  fetch_dependencies:
     main:
-      type: log
+      type: rebar
       config:
-  build:
-    main:
-      type: log
-      config:
-  post_build:
-    main:
-      type: log
-      config:
+        source_directory: erlci
+        executable: /usr/local/bin/rebar3
   create_artifacts:
     main:
-      type: log
+      type: cmd
       config:
-  publish_artifacts:
-    main:
-      type: log
-      config:
-  finish:
-    main:
-      type: log
-      config:
+        shell: /bin/bash
+        executable: /usr/bin/tar
+        args:
+          - zcf
+          - erlci.tar.bz2
+          - "*"
