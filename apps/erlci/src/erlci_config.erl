@@ -59,7 +59,7 @@ variables() ->
 %% @doc Loads the main YAML configuration file.
 -spec load(erlci_filename()) -> ok.
 load(Filename) ->
-  Config = ?YAML:read(Filename, #{}),
+  Config = ?YAML:read(Filename),
   ok = application:set_env(erlci, yaml_config, Config).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -73,5 +73,5 @@ value(Key) ->
 %% @doc Returns a configuration value or a default value.
 -spec value(erlci_config_key(), term()) -> erlci_config_value().
 value(Key, Default) ->
-  {ok, Config} = application:get_env(erlci, yaml_config),
+  Config = application:get_env(erlci, yaml_config, []),
   ?YAML:field(Config, Key, Default).
