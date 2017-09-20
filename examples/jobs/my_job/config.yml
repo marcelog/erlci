@@ -13,6 +13,25 @@ phases:
       config:
         source_directory: erlci
         executable: /usr/local/bin/rebar3
+  static_analysis:
+    dialyzer:
+      type: rebar
+      config:
+        task: dialyzer
+        source_directory: erlci
+        executable: /usr/local/bin/rebar3
+    xref:
+      type: rebar
+      config:
+        task: xref
+        source_directory: erlci
+        executable: /usr/local/bin/rebar3
+  generate_doc:
+    main:
+      type: rebar
+      config:
+        source_directory: erlci
+        executable: /usr/local/bin/rebar3
   create_artifacts:
     main:
       type: cmd

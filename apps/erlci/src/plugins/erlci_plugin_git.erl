@@ -23,7 +23,7 @@
 -homepage("http://marcelog.github.com/").
 -license("Apache License 2.0").
 
--behavior(erlci_plugin_behavior).
+-behavior(erlci_plugin).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Includes.
@@ -59,8 +59,9 @@
   erlci_step_config()
 ) -> erlci_step_result().
 run(Job, Build, Phase, Config) ->
+  Name = ?PLUGIN:proc_name(?MODULE, Job, Build),
   gen_server:start(
-    {local, ?MODULE}, ?MODULE, [self(), Job, Build, Phase, Config], []
+    {local, Name}, ?MODULE, [self(), Job, Build, Phase, Config], []
   ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -129,9 +130,7 @@ handle_info(run, State) ->
     args => ["clone", Repository],
     env => #{}
   },
-  ?BUILD:log(BuildPid, info, "Running ~p", [ExecInfo]),
-  {ok, Pid} = ?EXEC:start(ExecInfo),
-  Ref = erlang:monitor(process, Pid),
+  {Pid, Ref} = ?PLUGIN:exec(BuildPid, ExecInfo),
   {noreply, State#{
     pid := Pid,
     ref := Ref

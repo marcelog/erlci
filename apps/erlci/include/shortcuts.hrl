@@ -6,5 +6,6 @@
 -define(CFG, erlci_config).
 -define(EXEC, erlci_exec).
 -define(YAML, erlci_yaml).
+-define(PLUGIN, erlci_plugin).
 
 -endif.

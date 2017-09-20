@@ -23,7 +23,7 @@
 -homepage("http://marcelog.github.com/").
 -license("Apache License 2.0").
 
--behavior(erlci_plugin_behavior).
+-behavior(erlci_plugin).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Includes.
@@ -59,8 +59,9 @@
   erlci_step_config()
 ) -> erlci_step_result().
 run(Job, Build, Phase, Config) ->
+  Name = ?PLUGIN:proc_name(?MODULE, Job, Build),
   gen_server:start(
-    {local, ?MODULE}, ?MODULE, [self(), Job, Build, Phase, Config], []
+    {local, Name}, ?MODULE, [self(), Job, Build, Phase, Config], []
   ).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -119,6 +120,39 @@ handle_info(
   ?BUILD:log(BuildPid, error, "Rebar failed with status code: ~p", [Code]),
   {stop, failed, State};
 
+handle_info(run, State = #{phase := generate_doc}) ->
+  #{build := Build, config := Config, build_pid := BuildPid} = State,
+  Executable = ?YAML:field(Config, "executable"),
+  SourceDir = ?YAML:field(Config, "source_directory"),
+  ExecInfo = #{
+    cwd => filename:join([?BUILD:home(Build), SourceDir]),
+    command => Executable,
+    args => ["edoc"],
+    env => #{}
+  },
+  {Pid, Ref} = ?PLUGIN:exec(BuildPid, ExecInfo),
+  {noreply, State#{
+    pid := Pid,
+    ref := Ref
+  }};
+
+handle_info(run, State = #{phase := static_analysis}) ->
+  #{build := Build, config := Config, build_pid := BuildPid} = State,
+  Executable = ?YAML:field(Config, "executable"),
+  SourceDir = ?YAML:field(Config, "source_directory"),
+  Task = ?YAML:field(Config, "task"),
+  ExecInfo = #{
+    cwd => filename:join([?BUILD:home(Build), SourceDir]),
+    command => Executable,
+    args => [Task],
+    env => #{}
+  },
+  {Pid, Ref} = ?PLUGIN:exec(BuildPid, ExecInfo),
+  {noreply, State#{
+    pid := Pid,
+    ref := Ref
+  }};
+
 handle_info(run, State = #{phase := fetch_dependencies}) ->
   #{build := Build, config := Config, build_pid := BuildPid} = State,
   Executable = ?YAML:field(Config, "executable"),
@@ -129,9 +163,7 @@ handle_info(run, State = #{phase := fetch_dependencies}) ->
     args => ["get-deps"],
     env => #{}
   },
-  ?BUILD:log(BuildPid, info, "Running ~p", [ExecInfo]),
-  {ok, Pid} = ?EXEC:start(ExecInfo),
-  Ref = erlang:monitor(process, Pid),
+  {Pid, Ref} = ?PLUGIN:exec(BuildPid, ExecInfo),
   {noreply, State#{
     pid := Pid,
     ref := Ref

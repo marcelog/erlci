@@ -51,7 +51,7 @@
 
 -export([create/1]).
 -export([log/4]).
--export([home/1]).
+-export([home/1, number/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -61,6 +61,12 @@
 home(Build) ->
   #{home := Home} = Build,
   Home.
+
+%% @doc Returns the build number.
+-spec number(erlci_build()) -> pos_integer().
+number(Build) ->
+  #{build_number := BuildNumber} = Build,
+  BuildNumber.
 
 %% @doc Starts the port monitor.
 -spec start(erlci_build()) -> {ok, pid()}.
@@ -293,13 +299,13 @@ terminate(Reason, State) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc Returns the log filename for the given build.
+%% doc Returns the log filename for the given build.
 %-spec log(erlci_build()) -> erlci_filename().
 %log(Build) ->
 %  Home = home(Build),
 %  filename:join([Home, "log.txt"]).
 %
-%% @doc Returns the home directory of the build.
+%% doc Returns the home directory of the build.
 %-spec home(erlci_build()) -> erlci_directory().
 %home(Build) ->
 %  #{home := Home} = Build,

@@ -23,7 +23,7 @@
 -homepage("http://marcelog.github.com/").
 -license("Apache License 2.0").
 
--behavior(erlci_plugin_behavior).
+-behavior(erlci_plugin).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Includes.

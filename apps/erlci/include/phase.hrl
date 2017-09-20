@@ -12,9 +12,12 @@
   build_dependencies,
   prepare_build,
   build,
+  static_analysis,
   prepare_tests,
   run_tests,
   post_build,
+  prepare_doc_generation,
+  generate_doc,
   create_artifacts,
   publish_artifacts,
   finish
