@@ -22,6 +22,14 @@ See [examples/jobs/my_job/config.yml](https://github.com/marcelog/erlci/blob/mas
 make run
 ```
 
+# Start a build
+```
+erlci_build_monitor:start_build("my_job").
+```
+
+The build will generate a `log.txt` file inside the workspace of the build (e.g:
+/tmp/erlci/workspace/my_job/BUILD_NUMBER/log.txt).
+
 # Plugins
 You can write plugins to extend the build process with new features, for a few
 examples see: [src/plugins](https://github.com/marcelog/erlci/tree/master/apps/erlci/src/plugins).
