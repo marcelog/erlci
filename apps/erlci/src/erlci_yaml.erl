@@ -42,7 +42,16 @@
 read(Filename) ->
   lager:debug("Reading file ~p", [Filename]),
   [Doc|_] = yamerl_constr:file(Filename),
-  Doc.
+
+  Variables = [{list_to_atom(K), V} || {K, V} <- field(Doc, "variables", [])],
+  Ctx = dict:from_list(Variables),
+
+  {ok, Contents} = file:read_file(Filename),
+  ContentsString = binary_to_list(Contents),
+  NewContent = mustache:render(ContentsString, Ctx),
+
+  [NewDoc|_] = yamerl_constr:string(NewContent),
+  NewDoc.
 
 %% @doc Returns the value of the given key or 'undefined'.
 -spec field(

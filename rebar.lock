@@ -1,9 +1,19 @@
 {"1.1.0",
-[{<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
+[{<<"bbmustache">>,{pkg,<<"bbmustache">>,<<"1.5.0">>},0},
+ {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.5.1">>},0},
+ {<<"meck">>,
+  {git,"https://github.com/eproxus/meck.git",
+       {ref,"3544aca8b90344832bfefe65469408c1fd1174fd"}},
+  1},
+ {<<"mustache">>,
+  {git,"git://github.com/mojombo/mustache.erl",
+       {ref,"031c7aa302810424c198aa003aa8cf090150b555"}},
+  0},
  {<<"yamerl">>,{pkg,<<"yamerl">>,<<"0.5.0">>},0}]}.
 [
 {pkg_hash,[
+ {<<"bbmustache">>, <<"8CFDE0602E90A4057E161BF5288ADE854B4E511E2E8924966A8438730E958381">>},
  {<<"goldrush">>, <<"F06E5D5F1277DA5C413E84D5A2924174182FB108DABB39D5EC548B27424CD106">>},
  {<<"lager">>, <<"63897A61AF646C59BB928FEE9756CE8BDD02D5A1A2F3551D4A5E38386C2CC071">>},
  {<<"yamerl">>, <<"6EC55A5D830F6F0D65A4030F5C5DB24B0E72B813DFBDE32FEA44B4951ED9417C">>}]}

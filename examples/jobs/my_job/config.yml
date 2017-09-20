@@ -1,37 +1,40 @@
 name: my_job
 description: We are going to use this to try a build
+variables:
+  rebar_location: /usr/local/bin/rebar3
+  git_location: /usr/local/bin/git
 phases:
   fetch_source:
     main:
       type: git
       config:
-        executable: /usr/local/bin/git
+        executable: {{git_location}}
         repository: https://github.com/marcelog/erlci
   fetch_dependencies:
     main:
       type: rebar
       config:
         source_directory: erlci
-        executable: /usr/local/bin/rebar3
+        executable: {{rebar_location}}
   static_analysis:
     dialyzer:
       type: rebar
       config:
         task: dialyzer
         source_directory: erlci
-        executable: /usr/local/bin/rebar3
+        executable: {{rebar_location}}
     xref:
       type: rebar
       config:
         task: xref
         source_directory: erlci
-        executable: /usr/local/bin/rebar3
+        executable: {{rebar_location}}
   generate_doc:
     main:
       type: rebar
       config:
         source_directory: erlci
-        executable: /usr/local/bin/rebar3
+        executable: {{rebar_location}}
   create_artifacts:
     main:
       type: cmd
