@@ -31,7 +31,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([load/1]).
+-export([load/2]).
 -export([inc_build_number/1]).
 -export([name/1, home/1, steps/2]).
 
@@ -39,10 +39,10 @@
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc Loads a job from its config file located inside its base home directory.
--spec load(erlci_job_name()) -> erlci_job().
-load(JobName) ->
+-spec load(erlci_job_name(), map()) -> erlci_job().
+load(JobName, Variables) ->
   BaseDir = ?CFG:jobs_dir(),
-  from_file(filename:join([BaseDir, JobName, "config.yml"])).
+  from_file(filename:join([BaseDir, JobName, "config.yml"]), Variables).
 
 %% @doc Increments the build number of a given job.
 -spec inc_build_number(erlci_job()) -> pos_integer().
@@ -78,9 +78,9 @@ home(Job) ->
 %%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc Loads a job from a YAML file.
--spec from_file(erlci_filename()) -> erlci_job().
-from_file(Filename) ->
-  Doc = ?YAML:read(Filename),
+-spec from_file(erlci_filename(), map()) -> erlci_job().
+from_file(Filename, Variables) ->
+  Doc = ?YAML:read(Filename, Variables),
   JobName = ?YAML:field(Doc, "name"),
   Job = new(
     JobName,

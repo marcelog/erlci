@@ -32,7 +32,11 @@
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([load/1]).
--export([workspace_dir/0, jobs_dir/0]).
+-export([
+  workspace_dir/0,
+  jobs_dir/0,
+  variables/0
+]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -47,10 +51,15 @@ workspace_dir() ->
 jobs_dir() ->
   value("jobs_dir").
 
+%% @doc Returns top level variables.
+-spec variables() -> map().
+variables() ->
+  maps:from_list(value("variables", [])).
+
 %% @doc Loads the main YAML configuration file.
 -spec load(erlci_filename()) -> ok.
 load(Filename) ->
-  Config = ?YAML:read(Filename),
+  Config = ?YAML:read(Filename, #{}),
   ok = application:set_env(erlci, yaml_config, Config).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -59,5 +68,10 @@ load(Filename) ->
 %% @doc Returns a configuration value.
 -spec value(erlci_config_key()) -> erlci_config_value().
 value(Key) ->
+  value(Key, undefined).
+
+%% @doc Returns a configuration value or a default value.
+-spec value(erlci_config_key(), term()) -> erlci_config_value().
+value(Key, Default) ->
   {ok, Config} = application:get_env(erlci, yaml_config),
-  ?YAML:field(Config, Key).
+  ?YAML:field(Config, Key, Default).

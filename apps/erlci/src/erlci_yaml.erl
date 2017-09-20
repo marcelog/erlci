@@ -31,20 +31,29 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([read/1, field/2]).
+-export([read/2, field/2, field/3]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% @doc Loads/pases a YAML file.
--spec read(erlci_filename()) -> erlci_config().
-read(Filename) ->
-  lager:debug("Reading file ~p", [Filename]),
+-spec read(erlci_filename(), map()) -> erlci_config().
+read(Filename, OriginalVariables) ->
+  lager:debug("Reading file ~p using ~p", [Filename, OriginalVariables]),
   [Doc|_] = yamerl_constr:file(Filename),
 
-  Variables = [{list_to_atom(K), V} || {K, V} <- field(Doc, "variables", [])],
-  Ctx = dict:from_list(Variables),
+  OriginalVariablesProplist = [
+    {list_to_atom(K), V}
+    || {K, V}
+    <- maps:to_list(OriginalVariables)
+  ],
+  FileVariables = [
+    {list_to_atom(K), V}
+    || {K, V}
+    <- field(Doc, "variables", [])
+  ],
+  Ctx = dict:from_list(OriginalVariablesProplist ++ FileVariables),
 
   {ok, Contents} = file:read_file(Filename),
   ContentsString = binary_to_list(Contents),

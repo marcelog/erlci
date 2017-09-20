@@ -80,7 +80,7 @@ init([]) ->
 handle_call({start_build, JobName}, _From, State) ->
   #{monitor_refs := MonitorRefs} = State,
   {Result, NewState} = try
-    Job = ?JOB:load(JobName),
+    Job = ?JOB:load(JobName, ?CFG:variables()),
     Build = ?BUILD:create(Job),
     {ok, BuildPid} = ?BUILD:start(Build),
     BuildRef = erlang:monitor(process, BuildPid),

@@ -1,8 +1,7 @@
 name: my_job
 description: We are going to use this to try a build
 variables:
-  rebar_location: /usr/local/bin/rebar3
-  git_location: /usr/local/bin/git
+  src_dir: erlci
 phases:
   fetch_source:
     main:
@@ -14,26 +13,26 @@ phases:
     main:
       type: rebar
       config:
-        source_directory: erlci
+        source_directory: {{src_dir}}
         executable: {{rebar_location}}
   static_analysis:
     dialyzer:
       type: rebar
       config:
         task: dialyzer
-        source_directory: erlci
+        source_directory: {{src_dir}}
         executable: {{rebar_location}}
     xref:
       type: rebar
       config:
         task: xref
-        source_directory: erlci
+        source_directory: {{src_dir}}
         executable: {{rebar_location}}
   generate_doc:
     main:
       type: rebar
       config:
-        source_directory: erlci
+        source_directory: {{src_dir}}
         executable: {{rebar_location}}
   create_artifacts:
     main:
