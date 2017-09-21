@@ -16,6 +16,39 @@ See [examples/config.yml](https://github.com/marcelog/erlci/blob/master/examples
 ## Job config file
 See [examples/jobs/my_job/config.yml](https://github.com/marcelog/erlci/blob/master/examples/jobs/my_job/config.yml).
 
+## Variables
+Config files can include variables (actually, they are parsed as [mustache](https://mustache.github.io)
+template files). For example, your main config file could be something like:
+```yaml
+# ... other config options...
+variables:
+  shell: /bin/bash
+  bash: {{shell}}
+```
+
+So the variable `bash` will be equal to the value of the variable `shell`. Then,
+in your job config file:
+```yaml
+# ... other config options...
+variables:
+  my_shell: {{bash}}
+phases:
+  # ... other phases...
+  create_artifacts:
+    main:
+      type: cmd
+      config:
+        shell: {{my_shell}}
+        executable: /usr/bin/tar
+        args:
+          - zcf
+          - artifact.tar.bz2
+          - "*"
+```
+
+As result, global variables declared in your main config file are also
+available in the configuration file of your jobs.
+
 # Running it
 
 ```bash

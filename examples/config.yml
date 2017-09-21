@@ -3,3 +3,5 @@ workspace_dir: /tmp/erlci/workspace
 variables:
   rebar_location: /usr/local/bin/rebar3
   git_location: /usr/local/bin/git
+  shell: /bin/bash
+  bash: {{shell}}

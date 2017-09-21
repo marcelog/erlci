@@ -38,7 +38,7 @@ phases:
     main:
       type: cmd
       config:
-        shell: /bin/bash
+        shell: {{bash}}
         executable: /usr/bin/tar
         args:
           - zcf
