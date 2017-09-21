@@ -49,6 +49,32 @@ phases:
 As result, global variables declared in your main config file are also
 available in the configuration file of your jobs.
 
+# Build phases
+The build goes through different `phases` in order, you can see all of them
+[here](https://github.com/marcelog/erlci/blob/master/apps/erlci/include/phase.hrl).
+
+It's **not necessary** to have all of them setup in your job's config file, and
+the build will skip the ones missing. You can configure the different build
+phases like this:
+```yaml
+# ... other config options...
+phases:
+  # ... other phases...
+  fetch_source:
+    main:
+      type: git
+      config:
+        executable: {{git_location}}
+        repository: https://github.com/marcelog/erlci
+  fetch_dependencies:
+    main:
+      type: rebar
+      config:
+        source_directory: {{src_dir}}
+        executable: {{rebar_location}}
+  # ... other phases...
+```
+
 # Running it
 
 ```bash
