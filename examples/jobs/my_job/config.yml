@@ -1,14 +1,18 @@
 name: my_job
 description: We are going to use this to try a build
 variables:
+  repo: https://github.com/marcelog/erlci
   src_dir: erlci
+triggers:
+  git_poll:
+    repository: {{repo}}
 phases:
   fetch_source:
     main:
       type: git
       config:
         executable: {{git_location}}
-        repository: https://github.com/marcelog/erlci
+        repository: {{repo}}
   fetch_dependencies:
     main:
       type: rebar
