@@ -1,4 +1,4 @@
-%%% @doc Minimal vixie-cron expression parser. Base on the information in
+%%% @doc Minimal vixie-cron expression parser. Based on the information in
 %%% https://en.wikipedia.org/wiki/Cron
 %%%
 %%% @todo Add support for "L", "W", and "?"
@@ -34,16 +34,29 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Given a datetime() and a vixie-like cron expression, will return true
+%% if the expression covers the datetime().
+-spec applies(calendar:datetime(), string()) -> boolean().
 applies(
-  _DateTime = {{_Year, _Month, _Day}, {Hour, Minute, _Second}},
+  _DateTime = {{Year, Month, Day}, {Hour, Minute, _Second}},
   Expression
 ) ->
   [
     MinuteExpression,
-    HourExpression
+    HourExpression,
+    DoMExpression,
+    MonthExpression,
+    DoWExpression
   ]  = string:tokens(Expression, " "),
+  DoW = case calendar:day_of_the_week(Year, Month, Day) of
+    7 -> 0;
+    DoW_ -> DoW_
+  end,
   applies_standard(Minute, 60, MinuteExpression) andalso
-  applies_standard(Hour, 60, HourExpression).
+  applies_standard(Hour, 60, HourExpression) andalso
+  applies_standard(Month, 12, DoMExpression) andalso
+  applies_standard(Day, 31, DoMExpression) andalso
+  applies_standard(DoW, 6, DoWExpression).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
