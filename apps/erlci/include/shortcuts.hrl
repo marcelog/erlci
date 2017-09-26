@@ -7,5 +7,6 @@
 -define(EXEC, erlci_exec).
 -define(YAML, erlci_yaml).
 -define(PLUGIN, erlci_plugin).
+-define(TRIGGER, erlci_trigger).
 
 -endif.

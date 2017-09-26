@@ -1,4 +1,4 @@
-%%% @doc Top level supervisor.
+%%% @doc Trigger behavior.
 %%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
@@ -17,48 +17,33 @@
 %%% @copyright Marcelo Gornstein <marcelog@gmail.com>
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
--module(erlci_sup).
--author("marcelog@gmail.com").
--github("https://github.com/marcelog").
--homepage("http://marcelog.github.com/").
--license("Apache License 2.0").
+-module(erlci_trigger).
 
--behaviour(supervisor).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Includes.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-include("include/erlci.hrl").
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Callbacks.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-callback start_link(
+  erlci_job(),
+  erlci_trigger_config()
+) -> erlci_trigger_result().
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([start_link/0]).
--export([init/1]).
+-export([proc_name/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc Starts the supervisor.
--spec start_link() -> supervisor:startlink_ret().
-start_link() ->
-  supervisor:start_link({local, ?MODULE}, ?MODULE, []).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Supervisor callbacks.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc http://erlang.org/doc/man/supervisor.html#Module:init-1
--spec init(
-  term()
-) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}} | ignore.
-init([]) ->
-  Children = [
-    {
-      erlci_build_monitor,
-      {erlci_build_monitor, start_link, []},
-      permanent,
-      brutal_kill,
-      worker,
-      []
-    }
-  ],
-  {ok, { {one_for_all, 0, 1}, Children} }.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Private API.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc For triggers that need to start themselves as a process, this will
+%% return a unified name for it, taking into account the module and the job.
+-spec proc_name(module(), erlci_job()) -> atom().
+proc_name(TriggerModule, Job) ->
+  Module = atom_to_list(TriggerModule),
+  JobName = ?JOB:name(Job),
+  list_to_atom(string:join([Module, JobName], "_")).

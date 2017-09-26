@@ -5,7 +5,11 @@ variables:
   src_dir: erlci
 triggers:
   git_poll:
+    expression: "*/1 * * * *"
+    executable: {{git_location}}
     repository: {{repo}}
+  cron:
+    expression: "*/1 * * * *"
 phases:
   fetch_source:
     main:

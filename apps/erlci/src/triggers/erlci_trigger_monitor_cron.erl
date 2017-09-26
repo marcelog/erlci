@@ -1,4 +1,4 @@
-%%% @doc Starts/Stops/Monitor builds.
+%%% @doc Cron trigger.
 %%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
@@ -17,12 +17,13 @@
 %%% @copyright Marcelo Gornstein <marcelog@gmail.com>
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
--module(erlci_build_monitor).
+-module(erlci_trigger_monitor_cron).
 -author("marcelog@gmail.com").
 -github("https://github.com/marcelog").
 -homepage("http://marcelog.github.com/").
 -license("Apache License 2.0").
--behavior(gen_server).
+
+-behavior(erlci_trigger_monitor).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Includes.
@@ -47,87 +48,37 @@
   terminate/2
 ]).
 
--export([start_build/1]).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc Starts and links the build monitor.
--spec start_link() -> {ok, pid()}.
+%% @doc Starts and supervises the trigger.
+-spec start_link() -> erlci_trigger_monitor_result().
 start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
-
-%% @doc Starts a new build for the given job name.
--spec start_build(erlci_job_name()) -> {ok, erlci_build()} | {error, term()}.
-start_build(JobName) ->
-  gen_server:call(?MODULE, {start_build, JobName}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% gen_server API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:init-1
--spec init([]) -> {ok, state()}.
+-spec init([term()]) -> {ok, state()}.
 init([]) ->
-  lager:debug("Build monitor started"),
-  {ok, #{
-    monitor_refs => [],
-    current_builds => [],
-    current_jobs => []
-  }}.
+  {ok, #{}}.
 
-%% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_call-3
--spec handle_call(
-  term(), {pid(), term()}, state()
-) -> {reply, term(), state()}.
-handle_call({start_build, JobName}, _From, State) ->
-  #{monitor_refs := MonitorRefs} = State,
-  {Result, NewState} = try
-    Job = ?JOB:load(JobName),
-    Build = ?BUILD:create(Job),
-    {ok, BuildPid} = ?BUILD:start(Build),
-    BuildRef = erlang:monitor(process, BuildPid),
-    NewMonitorRefs = [{BuildRef, BuildPid, Build}|MonitorRefs],
-    {{ok, Build}, State#{monitor_refs := NewMonitorRefs}}
-  catch
-    _:E -> {{error, E}, State}
-  end,
-  {reply, Result, NewState};
-
+-spec handle_call(term(), {pid(), term()}, state()) -> {reply, term(), state()}.
 handle_call(Message, _From, State) ->
-  lager:warning("Build Monitor got unknown request: ~p", [Message]),
+  lager:warning("Cron Trigger Monitor got unknown call: ~p", [Message]),
   {reply, not_implemented, State}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_cast-2
 -spec handle_cast(term(), state()) -> {noreply, state()}.
 handle_cast(Message, State) ->
-  lager:warning("Build Monitor got unknown msg: ~p", [Message]),
+  lager:warning("Cron Trigger Monitor got unknown cast: ~p", [Message]),
   {noreply, State}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_info-2
 -spec handle_info(term(), state()) -> {noreply, state()}.
-handle_info({'DOWN', BuildRef, process, BuildPid, Info}, State) ->
-  #{monitor_refs := MonitorRefs} = State,
-  {BuildRef, BuildPid, Build} = find_build(BuildRef, MonitorRefs),
-  lager:info(
-    "Build process finished with ~p pid (~p) Build: ~p ",
-    [Info, BuildPid, Build]
-  ),
-  {noreply, State};
-
-handle_info({build_started, BuildPid, Build}, State) ->
-  #{monitor_refs := MonitorRefs} = State,
-  {_BuildRef, BuildPid, _Build} = find_build(BuildPid, MonitorRefs),
-  lager:info("Build Started with pid (~p): ~p", [BuildPid, Build]),
-  {noreply, State};
-
-handle_info({build_finished, BuildPid, Build}, State) ->
-  #{monitor_refs := MonitorRefs} = State,
-  {_BuildRef, BuildPid, _Build} = find_build(BuildPid, MonitorRefs),
-  lager:info("Build Finished with pid (~p): ~p", [BuildPid, Build]),
-  {noreply, State};
-
 handle_info(Info, State) ->
-  lager:warning("Build Monitor got unknown msg: ~p", [Info]),
+  lager:warning("Cron Trigger Monitor got unknown info: ~p", [Info]),
   {noreply, State}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:code_change-3
@@ -137,24 +88,5 @@ code_change(_OldVsn, State, _Extra) ->
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:terminate-2
 -spec terminate(term(), state()) -> ok.
-terminate(_Reason, _State) ->
+terminate(Reason, State) ->
   ok.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Private API.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc Finds a build by monitor reference.
--spec find_build(
-  reference() | pid(), [{reference(), pid(), erlci_build()}]
-) -> undefined | {reference(), pid(), erlci_build()}.
-find_build(_RefOrPid, []) ->
-  undefined;
-
-find_build(Ref, [Result = {Ref, _Pid, _Build}|_]) ->
-  Result;
-
-find_build(Pid, [Result = {_Ref, Pid, _Build}|_]) ->
-  Result;
-
-find_build(RefOrPid, [_|NextRefs]) ->
-  find_build(RefOrPid, NextRefs).
