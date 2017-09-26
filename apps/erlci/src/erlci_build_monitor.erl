@@ -47,7 +47,7 @@
   terminate/2
 ]).
 
--export([start_build/1]).
+-export([start_build/1, build_is_running/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -62,6 +62,12 @@ start_link() ->
 start_build(JobName) ->
   gen_server:call(?MODULE, {start_build, JobName}).
 
+%% @doc Returns true if there is a build currently running for the given
+%% job name.
+-spec build_is_running(erlci_job_name()) -> false | {true, erlci_build()}.
+build_is_running(JobName) ->
+  gen_server:call(?MODULE, {build_is_running, JobName}).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% gen_server API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -71,14 +77,21 @@ init([]) ->
   lager:debug("Build monitor started"),
   {ok, #{
     monitor_refs => [],
-    current_builds => [],
-    current_jobs => []
+    current_jobs => #{}
   }}.
 
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_call-3
 -spec handle_call(
   term(), {pid(), term()}, state()
 ) -> {reply, term(), state()}.
+handle_call({build_is_running, JobName}, _From, State) ->
+  #{current_jobs := CurrentJobs} = State,
+  Result = case maps:get(JobName, CurrentJobs, not_found) of
+    not_found -> false;
+    Build -> {true, Build}
+  end,
+  {reply, Result, State};
+
 handle_call({start_build, JobName}, _From, State) ->
   #{monitor_refs := MonitorRefs} = State,
   {Result, NewState} = try
@@ -87,7 +100,9 @@ handle_call({start_build, JobName}, _From, State) ->
     {ok, BuildPid} = ?BUILD:start(Build),
     BuildRef = erlang:monitor(process, BuildPid),
     NewMonitorRefs = [{BuildRef, BuildPid, Build}|MonitorRefs],
-    {{ok, Build}, State#{monitor_refs := NewMonitorRefs}}
+    {{ok, Build}, State#{
+      monitor_refs := NewMonitorRefs
+    }}
   catch
     _:E -> {{error, E}, State}
   end,
@@ -106,19 +121,23 @@ handle_cast(Message, State) ->
 %% @doc http://erlang.org/doc/man/gen_server.html#Module:handle_info-2
 -spec handle_info(term(), state()) -> {noreply, state()}.
 handle_info({'DOWN', BuildRef, process, BuildPid, Info}, State) ->
-  #{monitor_refs := MonitorRefs} = State,
+  #{monitor_refs := MonitorRefs, current_jobs := CurrentJobs} = State,
   {BuildRef, BuildPid, Build} = find_build(BuildRef, MonitorRefs),
+  Job = ?BUILD:job(Build),
+  JobName = ?JOB:name(Job),
   lager:info(
     "Build process finished with ~p pid (~p) Build: ~p ",
     [Info, BuildPid, Build]
   ),
-  {noreply, State};
+  {noreply, State#{current_jobs := maps:remove(JobName, CurrentJobs)}};
 
 handle_info({build_started, BuildPid, Build}, State) ->
-  #{monitor_refs := MonitorRefs} = State,
+  #{monitor_refs := MonitorRefs, current_jobs := CurrentJobs} = State,
   {_BuildRef, BuildPid, _Build} = find_build(BuildPid, MonitorRefs),
   lager:info("Build Started with pid (~p): ~p", [BuildPid, Build]),
-  {noreply, State};
+  Job = ?BUILD:job(Build),
+  JobName = ?JOB:name(Job),
+  {noreply, State#{current_jobs := maps:put(JobName, Build, CurrentJobs)}};
 
 handle_info({build_finished, BuildPid, Build}, State) ->
   #{monitor_refs := MonitorRefs} = State,

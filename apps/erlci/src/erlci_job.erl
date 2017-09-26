@@ -33,7 +33,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([load/1]).
 -export([inc_build_number/1]).
--export([name/1, home/1, steps/2]).
+-export([name/1, home/1, steps/2, triggers/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -74,6 +74,12 @@ home(Job) ->
   #{home := Home} = Job,
   Home.
 
+%% @doc Returns triggers for this job.
+-spec triggers(erlci_job()) -> map().
+triggers(Job) ->
+  #{triggers := Triggers} = Job,
+  Triggers.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,7 +108,8 @@ from_file(Filename) ->
     Job,
     ?YAML:field(Doc, "phases")
   ),
-  NewJob.
+  NewJob2 = NewJob#{triggers := ?YAML:field(Doc, "triggers")},
+  NewJob2.
 
 %% @doc Creates a new job structure.
 -spec new(
@@ -114,6 +121,7 @@ new(Name, Description, Home) ->
     description => Description,
     home => Home,
     phases => #{},
+    triggers => #{},
     variables => #{}
   }.
 

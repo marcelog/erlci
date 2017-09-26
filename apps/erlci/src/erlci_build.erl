@@ -51,7 +51,7 @@
 
 -export([create/1]).
 -export([log/4]).
--export([home/1, number/1]).
+-export([home/1, number/1, job/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -67,6 +67,12 @@ home(Build) ->
 number(Build) ->
   #{build_number := BuildNumber} = Build,
   BuildNumber.
+
+%% @doc Returns the job.
+-spec job(erlci_build()) -> erlci_job().
+job(Build) ->
+  #{job := Job} = Build,
+  Job.
 
 %% @doc Starts the port monitor.
 -spec start(erlci_build()) -> {ok, pid()}.

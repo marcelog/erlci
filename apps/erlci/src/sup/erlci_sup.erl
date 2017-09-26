@@ -54,7 +54,7 @@ start_link() ->
 init([]) ->
   Children = [
     ?WORKER(erlci_build_monitor),
-    ?SUP(erlci_sup_trigger)
+    ?WORKER(erlci_trigger_monitor)
   ],
   {ok, { {one_for_one, 0, 1}, Children} }.
 

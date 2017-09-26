@@ -7,7 +7,6 @@
 
 -type erlci_trigger() :: map().
 
--type erlci_trigger_monitor_result() :: {ok, pid()}.
 -type erlci_trigger_result() :: {ok, pid()}.
 
 -endif.
