@@ -101,22 +101,23 @@ terminate(_Reason, _State) ->
 -spec process(erlci_job_name()) -> ok.
 process(JobName) ->
   Job = ?JOB:load(JobName),
-  Triggers = maps:to_list(?JOB:triggers(Job)),
+  Triggers = ?JOB:triggers(Job),
   _ = run_triggers(Job, Triggers),
   ok.
 
 %% @doc Runs all triggers for the given job.
 -spec run_triggers(erlci_job(), proplists:proplist()) -> ok.
-run_triggers(Job, Triggers) ->
-  _ = [
-    run_trigger(Job, TriggerType, Config)
-    || {TriggerType, Config}
-    <- Triggers
-  ],
-  ok.
+run_triggers(_Job, []) ->
+  ok;
+
+run_triggers(Job, [{TriggerType, Config}|Triggers]) ->
+  case run_trigger(Job, TriggerType, Config) of
+    skip -> run_triggers(Job, Triggers);
+    ok -> ok
+  end.
 
 %% @doc Runs the given trigger type with the given config for the job.
--spec run_trigger(erlci_job(), string(), proplists:proplist()) -> ok.
+-spec run_trigger(erlci_job(), string(), proplists:proplist()) -> ok | skip.
 run_trigger(Job, TriggerType, Config) ->
   JobName = ?JOB:name(Job),
   _ = case erlci_build_monitor:build_is_running(JobName) of
@@ -124,26 +125,28 @@ run_trigger(Job, TriggerType, Config) ->
       TriggerModule = list_to_atom(
         string:join(["erlci", "trigger", TriggerType], "_")
       ),
-      %% @todo what should we do with this pid.. ?
       try
         case erlang:apply(TriggerModule, start, [Job, Config]) of
           {start_build, Reason, Description} ->
             BuildDescription = ?BUILD:describe_build(
               "trigger", atom_to_list(TriggerModule), Reason, Description
             ),
-            erlci_build_monitor:start_build(JobName, BuildDescription);
-          skip -> lager:debug("Skipping ~p for ~p", [TriggerType, JobName])
+            erlci_build_monitor:start_build(JobName, BuildDescription),
+            ok;
+          skip ->
+            lager:debug("Skipping ~p for ~p", [TriggerType, JobName]),
+            skip
         end
       catch
-        _:E -> lager:debug(
+        _:E -> lager:error(
           "Error in trigger ~p for ~p: ~p", [TriggerType, JobName, E]
-        )
+        ),
+        skip
       end;
     {true, Build} -> lager:debug(
       "Skipping ~p for ~p since build (~p) is already running", [
         TriggerType, ?JOB:name(Job), ?BUILD:number(Build)
       ]
-    )
-  end,
-  ok.
-
+    ),
+    skip
+  end.

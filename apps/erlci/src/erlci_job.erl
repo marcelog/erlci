@@ -75,7 +75,7 @@ home(Job) ->
   Home.
 
 %% @doc Returns triggers for this job.
--spec triggers(erlci_job()) -> map().
+-spec triggers(erlci_job()) -> proplists:proplist().
 triggers(Job) ->
   #{triggers := Triggers} = Job,
   Triggers.
