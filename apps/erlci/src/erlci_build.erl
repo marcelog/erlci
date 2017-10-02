@@ -49,9 +49,9 @@
   terminate/2
 ]).
 
--export([create/1]).
+-export([create/2, describe_build/4]).
 -export([log/4]).
--export([home/1, number/1, job/1]).
+-export([home/1, number/1, job/1, description/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -74,6 +74,12 @@ job(Build) ->
   #{job := Job} = Build,
   Job.
 
+%% @doc Returns the job description.
+-spec description(erlci_build()) -> erlci_job().
+description(Build) ->
+  #{description := BuildDescription} = Build,
+  BuildDescription.
+
 %% @doc Starts the port monitor.
 -spec start(erlci_build()) -> {ok, pid()}.
 start(Build) ->
@@ -92,8 +98,8 @@ log(BuildPid, Level, Msg, Args) ->
   gen_server:cast(BuildPid, {log, Level, Msg, Args}).
 
 %% @doc Creates (but not runs) a new build for the given job.
--spec create(erlci_job()) -> erlci_build().
-create(Job) ->
+-spec create(erlci_job(), erlci_build_description()) -> erlci_build().
+create(Job, BuildDescription) ->
   NextBuild = ?JOB:inc_build_number(Job),
   JobName = ?JOB:name(Job),
   BuildHome = filename:join(
@@ -103,11 +109,27 @@ create(Job) ->
   ok = erlci_file:create_dir(BuildHome),
   #{
     build_number => NextBuild,
+    description => BuildDescription,
     log => Logfile,
     job => Job,
     home => BuildHome,
     phases => [],
     status => created
+  }.
+
+%% @doc Returns a build description, needed to create a build.
+-spec describe_build(
+  string(),
+  string(),
+  string(),
+  string()
+) -> erlci_build_description().
+describe_build(StartedByActor, StartedByName, Reason, Description) ->
+  #{
+    started_by_actor => StartedByActor,
+    started_by_name => StartedByName,
+    reason => Reason,
+    description => Description
   }.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -175,6 +197,16 @@ handle_cast(Message, State) ->
 handle_info({start}, State) ->
   #{job := Job, build := Build} = State,
   JobName = ?JOB:name(Job),
+  #{
+    started_by_actor := StartedByActor,
+    started_by_name := StartedByName,
+    reason := Reason,
+    description := Description
+  } = ?BUILD:description(Build),
+  lager:info(
+    "Starting build for ~p by actor ~p with name ~p reason: ~p, description: ~p",
+    [JobName, StartedByActor, StartedByName, Reason, Description]
+  ),
   self() ! {next_phase},
   lager:debug("Running phases for ~p", [JobName]),
   NewBuild = status_in_progress(Build),

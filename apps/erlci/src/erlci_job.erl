@@ -108,7 +108,7 @@ from_file(Filename) ->
     Job,
     ?YAML:field(Doc, "phases")
   ),
-  NewJob2 = NewJob#{triggers := ?YAML:field(Doc, "triggers")},
+  NewJob2 = NewJob#{triggers := ?YAML:field(Doc, "triggers", #{})},
   NewJob2.
 
 %% @doc Creates a new job structure.

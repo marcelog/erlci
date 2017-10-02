@@ -47,7 +47,7 @@
   terminate/2
 ]).
 
--export([start_build/1, build_is_running/1]).
+-export([start_build/2, build_is_running/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -58,9 +58,11 @@ start_link() ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 %% @doc Starts a new build for the given job name.
--spec start_build(erlci_job_name()) -> {ok, erlci_build()} | {error, term()}.
-start_build(JobName) ->
-  gen_server:call(?MODULE, {start_build, JobName}).
+-spec start_build(
+  erlci_job_name(), erlci_build_description()
+) -> {ok, erlci_build()} | {error, term()}.
+start_build(JobName, BuildDescription) ->
+  gen_server:call(?MODULE, {start_build, JobName, BuildDescription}).
 
 %% @doc Returns true if there is a build currently running for the given
 %% job name.
@@ -92,11 +94,11 @@ handle_call({build_is_running, JobName}, _From, State) ->
   end,
   {reply, Result, State};
 
-handle_call({start_build, JobName}, _From, State) ->
+handle_call({start_build, JobName, BuildDescription}, _From, State) ->
   #{monitor_refs := MonitorRefs} = State,
   {Result, NewState} = try
     Job = ?JOB:load(JobName),
-    Build = ?BUILD:create(Job),
+    Build = ?BUILD:create(Job, BuildDescription),
     {ok, BuildPid} = ?BUILD:start(Build),
     BuildRef = erlang:monitor(process, BuildPid),
     NewMonitorRefs = [{BuildRef, BuildPid, Build}|MonitorRefs],

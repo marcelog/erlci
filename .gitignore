@@ -1,3 +1,5 @@
+config/sys.config
+config/vm.args
 apps/erlci/.DS_Store
 apps/erlci/doc
 .rebar3

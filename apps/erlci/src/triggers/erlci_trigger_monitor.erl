@@ -75,16 +75,7 @@ handle_cast(Message, State) ->
 handle_info(run, State) ->
   lager:debug("Trigger Monitor activating triggers", []),
   {ok, Dirs} = file:list_dir(?CFG:jobs_dir()),
-  lists:foreach(
-    fun(JobName) ->
-      spawn(fun() ->
-        Job = ?JOB:load(JobName),
-        Triggers = ?JOB:triggers(Job),
-        lager:debug("XXXX: ~p: ~p", [Job, Triggers])
-      end)
-    end,
-    Dirs
-  ),
+  _ = [process(JobName) || JobName <- Dirs],
   erlang:send_after(60000, self(), run),
   {noreply, State};
 
@@ -101,3 +92,58 @@ code_change(_OldVsn, State, _Extra) ->
 -spec terminate(term(), state()) -> ok.
 terminate(_Reason, _State) ->
   ok.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Private API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Process the given job by looking up its configured triggers and
+%% running them.
+-spec process(erlci_job_name()) -> ok.
+process(JobName) ->
+  Job = ?JOB:load(JobName),
+  Triggers = maps:to_list(?JOB:triggers(Job)),
+  _ = run_triggers(Job, Triggers),
+  ok.
+
+%% @doc Runs all triggers for the given job.
+-spec run_triggers(erlci_job(), proplists:proplist()) -> ok.
+run_triggers(Job, Triggers) ->
+  _ = [
+    run_trigger(Job, TriggerType, Config)
+    || {TriggerType, Config}
+    <- Triggers
+  ],
+  ok.
+
+%% @doc Runs the given trigger type with the given config for the job.
+-spec run_trigger(erlci_job(), string(), proplists:proplist()) -> ok.
+run_trigger(Job, TriggerType, Config) ->
+  JobName = ?JOB:name(Job),
+  _ = case erlci_build_monitor:build_is_running(JobName) of
+    false ->
+      TriggerModule = list_to_atom(
+        string:join(["erlci", "trigger", TriggerType], "_")
+      ),
+      %% @todo what should we do with this pid.. ?
+      try
+        case erlang:apply(TriggerModule, start, [Job, Config]) of
+          {start_build, Reason, Description} ->
+            BuildDescription = ?BUILD:describe_build(
+              "trigger", atom_to_list(TriggerModule), Reason, Description
+            ),
+            erlci_build_monitor:start_build(JobName, BuildDescription);
+          skip -> lager:debug("Skipping ~p for ~p", [TriggerType, JobName])
+        end
+      catch
+        _:E -> lager:debug(
+          "Error in trigger ~p for ~p: ~p", [TriggerType, JobName, E]
+        )
+      end;
+    {true, Build} -> lager:debug(
+      "Skipping ~p for ~p since build (~p) is already running", [
+        TriggerType, ?JOB:name(Job), ?BUILD:number(Build)
+      ]
+    )
+  end,
+  ok.
+

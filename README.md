@@ -7,7 +7,7 @@ A CI server written in Erlang.
 Not-Sure-What-I'm-Doing-Yet with me!
 
 # Configuration
-Edit [config/sys.config](https://github.com/marcelog/erlci/blob/master/config/sys.config) and
+Edit [config/sys.config](https://github.com/marcelog/erlci/blob/master/config/sys.config.example) and
 change `config` so it points to your own config file.
 
 ## Main config file
@@ -83,7 +83,10 @@ make run
 
 # Start a build
 ```
-erlci_build_monitor:start_build("my_job").
+BuildDescription = erlci_build:describe_build(
+  "user", "marcelog", "manual trigger", "a nice build description"
+).
+erlci_build_monitor:start_build("my_job", BuildDescription).
 ```
 
 The build will generate a `log.txt` file inside the workspace of the build (e.g:
