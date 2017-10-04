@@ -20,7 +20,7 @@ See [examples/jobs/my_job/config.yml](https://github.com/marcelog/erlci/blob/mas
 Config files can include variables (actually, they are parsed as [mustache](https://mustache.github.io)
 template files). For example, your main config file could be something like:
 ```yaml
-# ... other config options...
+# ...other config options...
 variables:
   shell: /bin/bash
   bash: {{shell}}
