@@ -54,7 +54,7 @@ proc_name(TriggerModule, Job) ->
 
 %% @doc Called from triggers, intended to run an external command via shell
 %% by using erlci_exec:start/1 and then monitor the process.
--spec exec(map()) -> {ok, string()} | {error, term(), string()}.
+-spec exec(map()) -> {ok, [string()]} | {error, term(), [string()]}.
 exec(ExecInfo) ->
   lager:info("Running ~p", [ExecInfo]),
   {ok, Pid} = ?EXEC:start(ExecInfo),
@@ -64,12 +64,13 @@ exec(ExecInfo) ->
 %% @doc Waits for the end of the command.
 -spec exec_wait(
   reference(), pid(), [string()]
-) -> {ok, string()} | {error, term(), string()}.
+) -> {ok, [string()]} | {error, term(), [string()]}.
 exec_wait(Ref, Pid, Acc) ->
   receive
-    {exec_out, Line} -> exec_wait(Ref, Pid, [Line|Acc]);
+    {exec_out, Line} ->
+      exec_wait(Ref, Pid, [Line|Acc]);
     {'DOWN', Ref, process, Pid, normal} ->
-      {ok, lists:concat(lists:reverse(Acc))};
+      {ok, lists:reverse(Acc)};
     {'DOWN', Ref, process, Pid, {error, Code}} ->
-      {error, Code, lists:concat(lists:reverse(Acc))}
+      {error, Code, lists:reverse(Acc)}
   end.

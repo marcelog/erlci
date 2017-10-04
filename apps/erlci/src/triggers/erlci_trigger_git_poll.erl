@@ -47,10 +47,10 @@ start(Job, Config) ->
   Expression = ?YAML:field(Config, "expression"),
   case erl_vcron:applies(calendar:local_time(), Expression) of
     true ->
-      RevisionFile = ?JOB:filename(Job, "last_git_revision.txt"),
+      RevisionFile = last_revision_file(Job),
       case file:read_file(RevisionFile) of
-        {ok, Revision} -> process(Job, Config, Revision);
-        {error, enoent} -> process(Job, Config, <<"not_existant">>);
+        {ok, Revision} -> process(Job, Config, binary_to_list(Revision));
+        {error, enoent} -> process(Job, Config, "not_existant");
         {error, Error} ->
           lager:error("Could not read: ~p (~p)", [RevisionFile, Error]),
           skip
@@ -58,12 +58,17 @@ start(Job, Config) ->
     false -> skip
   end.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Private API.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% @doc Checks if a build needs to be triggered by comparing last revisions on
 %% remote/master and local/last build.
 -spec process(
-  erlci_job(), erlci_trigger_config(), binary()
+  erlci_job(), erlci_trigger_config(), string()
 ) -> erlci_trigger_result().
 process(Job, Config, Revision) ->
+  JobName = ?JOB:name(Job),
+  Branch = "refs/heads/master",
   Executable = ?YAML:field(Config, "executable"),
   Repo = ?YAML:field(Config, "repository"),
   SourceDir = ?YAML:field(Config, "source_directory"),
@@ -75,9 +80,39 @@ process(Job, Config, Revision) ->
   },
   case ?TRIGGER:exec(ExecInfo) of
     {ok, Output} ->
-      lager:debug("Ok: ~p", [Output]),
-      skip;
+      case find_revision(Output, Branch) of
+        undefined ->
+          lager:error("Could not find last revision for ~p", [Branch]),
+          skip;
+        Revision ->
+          lager:info(
+            "Same revision ~p for ~p, not building", [Revision, JobName
+          ]),
+          skip;
+        NewRevision ->
+          Description = lists:flatten(io_lib:format(
+            "From ~p to ~p", [Revision, NewRevision]
+          )),
+          ok = file:write_file(last_revision_file(Job), NewRevision),
+          {start_build, "Revision Changed", Description}
+      end;
     {error, Code, Output} ->
-      lager:error("Git Polling with ~p: ~p", [ExecInfo, Output]),
+      lager:error("Git Polling with ~p: ~p (~p)", [ExecInfo, Output, Code]),
       skip
   end.
+
+%% @doc Finds the revision of the given branch after a git ls-remote.
+-spec find_revision([string()], string()) -> undefined | string().
+find_revision([], _Branch) ->
+  undefined;
+
+find_revision([Line|Output], Branch) ->
+  case string:tokens(Line, "\t") of
+    [Revision, Branch] -> Revision;
+    [_Revision, _ABranch] -> find_revision(Output, Branch)
+  end.
+
+%% @doc Returns the path to the last revision file.
+-spec last_revision_file(erlci_job()) -> erlci_filename().
+last_revision_file(Job) ->
+  ?JOB:filename(Job, "last_git_revision.txt").
