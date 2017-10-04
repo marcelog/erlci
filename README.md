@@ -20,7 +20,7 @@ See [examples/jobs/my_job/config.yml](https://github.com/marcelog/erlci/blob/mas
 Config files can include variables (actually, they are parsed as [mustache](https://mustache.github.io)
 template files). For example, your main config file could be something like:
 ```yaml
-# ...other config options...
+# ... other config options...
 variables:
   shell: /bin/bash
   bash: {{shell}}
@@ -49,7 +49,7 @@ phases:
 As result, global variables declared in your main config file are also
 available in the configuration file of your jobs.
 
-# Build phases
+# Build phases, steps, and plugins
 The build goes through different `phases` in order, you can see all of them
 [here](https://github.com/marcelog/erlci/blob/master/apps/erlci/include/phase.hrl).
 
@@ -74,6 +74,42 @@ phases:
         executable: {{rebar_location}}
   # ... other phases...
 ```
+
+In this case, two phases are shown (`fetch_source` and `fetch_dependencies`),
+each one with just 1 **step** called `main` in both cases.
+
+The name of the step is anything you'd like, it's just a description useful
+for you when configuring the build. Steps are run in order of appearance. Each
+step will run a plugin, defined with the `type` key. The `config` key will
+depend on a per plugin basis. Current available plugins:
+ * [rebar](https://github.com/marcelog/erlci/blob/master/apps/erlci/src/plugins/erlci_plugin_rebar.erl): Uses rebar to run different tasks on the source, can be used in many different phases.
+ * [git](https://github.com/marcelog/erlci/blob/master/apps/erlci/src/plugins/erlci_plugin_git.erl): Uses [git](https://git-scm.com/) to fetch sources.
+ * [cmd](https://github.com/marcelog/erlci/blob/master/apps/erlci/src/plugins/erlci_plugin_cmd.erl): Runs a shell command.
+
+# Triggers
+Triggers can be setup in your job config file like this:
+```yaml
+name: my_job
+# ... other config options ...
+triggers:
+  git_poll:
+    expression: "*/1 * * * *"
+    executable: {{git_location}}
+    repository: {{repo}}
+    source_directory: {{src_dir}}
+  cron:
+    expression: "*/1 23 * * *"
+phases:
+  # ... your phases and other config options here ...
+```
+
+Triggers are useful to automatically start a build of your job in many different
+situations. The current available triggers are:
+
+* [cron](https://github.com/marcelog/erlci/blob/master/apps/erlci/src/triggers/erlci_trigger_cron.erl): Takes a
+[Vixie cron-like expression](https://en.wikipedia.org/wiki/Cron) in order to trigger a build.
+* [git_poll](https://github.com/marcelog/erlci/blob/master/apps/erlci/src/triggers/erlci_trigger_git_poll.erl): Given a
+Vixie cron-like expression, polls a GIT scm and starts a new build if there is a new revision.
 
 # Running it
 
