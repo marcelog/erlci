@@ -18,6 +18,10 @@
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
 -module(erlci_trigger).
+-author("marcelog@gmail.com").
+-github("https://github.com/marcelog").
+-homepage("http://marcelog.github.com/").
+-license("Apache License 2.0").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Includes.
@@ -35,7 +39,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([proc_name/2]).
+-export([proc_name/2, exec/1]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
@@ -47,3 +51,25 @@ proc_name(TriggerModule, Job) ->
   Module = atom_to_list(TriggerModule),
   JobName = ?JOB:name(Job),
   list_to_atom(string:join([Module, JobName], "_")).
+
+%% @doc Called from triggers, intended to run an external command via shell
+%% by using erlci_exec:start/1 and then monitor the process.
+-spec exec(map()) -> {ok, string()} | {error, term(), string()}.
+exec(ExecInfo) ->
+  lager:info("Running ~p", [ExecInfo]),
+  {ok, Pid} = ?EXEC:start(ExecInfo),
+  Ref = erlang:monitor(process, Pid),
+  exec_wait(Ref, Pid, []).
+
+%% @doc Waits for the end of the command.
+-spec exec_wait(
+  reference(), pid(), [string()]
+) -> {ok, string()} | {error, term(), string()}.
+exec_wait(Ref, Pid, Acc) ->
+  receive
+    {exec_out, Line} -> exec_wait(Ref, Pid, [Line|Acc]);
+    {'DOWN', Ref, process, Pid, normal} ->
+      {ok, lists:concat(lists:reverse(Acc))};
+    {'DOWN', Ref, process, Pid, {error, Code}} ->
+      {error, Code, lists:concat(lists:reverse(Acc))}
+  end.

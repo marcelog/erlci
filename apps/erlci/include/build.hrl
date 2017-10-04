@@ -5,6 +5,11 @@
 -type erlci_build() :: map().
 -type erlci_build_number() :: pos_integer().
 
+-type erlci_build_actor() :: string().
+-type erlci_build_actor_name() :: string().
+-type erlci_build_reason() :: string().
+-type erlci_build_description_text() :: string().
+
 -type erlci_build_description() :: map().
 
 -endif.

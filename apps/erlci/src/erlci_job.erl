@@ -34,10 +34,16 @@
 -export([load/1]).
 -export([inc_build_number/1]).
 -export([name/1, home/1, steps/2, triggers/1]).
+-export([filename/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Returns a path to a file inside the job's workspace.
+-spec filename(erlci_job(), erlci_filename()) -> erlci_path().
+filename(Job, Filename) ->
+  filename:join([home(Job), Filename]).
+
 %% @doc Loads a job from its config file located inside its base home directory.
 -spec load(erlci_job_name()) -> erlci_job().
 load(JobName) ->
@@ -164,5 +170,4 @@ next_build_number(Job) ->
 %% @doc Returns the full absolute path to the build number file of a given job.
 -spec build_number_file(erlci_job()) -> erlci_filename().
 build_number_file(Job) ->
-  JobHome = home(Job),
-  filename:join([JobHome, "last_build.txt"]).
+  filename(Job, "last_build.txt").

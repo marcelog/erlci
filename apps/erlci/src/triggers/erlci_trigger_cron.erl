@@ -1,4 +1,4 @@
-%%% @doc Plugin behavior.
+%%% @doc Cron trigger.
 %%%
 %%% Copyright 2017 Marcelo Gornstein &lt;marcelog@@gmail.com&gt;
 %%%
@@ -17,11 +17,13 @@
 %%% @copyright Marcelo Gornstein <marcelog@gmail.com>
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
--module(erlci_plugin).
+-module(erlci_trigger_cron).
 -author("marcelog@gmail.com").
 -github("https://github.com/marcelog").
 -homepage("http://marcelog.github.com/").
 -license("Apache License 2.0").
+
+-behavior(erlci_trigger).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Includes.
@@ -29,38 +31,21 @@
 -include("include/erlci.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Callbacks.
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--callback run(
-  erlci_job(),
-  erlci_build(),
-  erlci_phase_name(),
-  erlci_step_config()
-) -> erlci_step_result().
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Exports.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--export([proc_name/3, exec/2]).
+-export([start/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% @doc For plugins that need to start themselves as a process, this will
-%% return a unified name for it, taking into account the module, the job, and
-%% the build information.
--spec proc_name(module(), erlci_job(), erlci_build()) -> atom().
-proc_name(PluginModule, Job, Build) ->
-  Module = atom_to_list(PluginModule),
-  JobName = ?JOB:name(Job),
-  BuildNumber = integer_to_list(?BUILD:number(Build)),
-  list_to_atom(string:join([Module, JobName, BuildNumber], "_")).
-
-%% @doc Called from plugins, intended to run an external command via shell
-%% by using erlci_exec:start/1 and then monitor the process.
--spec exec(pid(), map()) -> {pid(), reference()}.
-exec(BuildPid, ExecInfo) ->
-  ?BUILD:log(BuildPid, info, "Running ~p", [ExecInfo]),
-  {ok, Pid} = ?EXEC:start(ExecInfo),
-  Ref = erlang:monitor(process, Pid),
-  {Pid, Ref}.
+%% @doc Runs this trigger.
+-spec start(
+  erlci_job(),
+  erlci_trigger_config()
+) -> erlci_trigger_result().
+start(_Job, Config) ->
+  Expression = ?YAML:field(Config, "expression"),
+  case erl_vcron:applies(calendar:local_time(), Expression) of
+    true -> {start_build, "Time to run", "Crontab expression matches"};
+    false -> skip
+  end.

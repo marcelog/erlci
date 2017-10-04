@@ -18,6 +18,10 @@
 %%% @author Marcelo Gornstein <marcelog@gmail.com>
 %%%
 -module(erlci_trigger_monitor).
+-author("marcelog@gmail.com").
+-github("https://github.com/marcelog").
+-homepage("http://marcelog.github.com/").
+-license("Apache License 2.0").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Includes.
@@ -126,6 +130,7 @@ run_trigger(Job, TriggerType, Config) ->
         string:join(["erlci", "trigger", TriggerType], "_")
       ),
       try
+        lager:debug("Testing ~p for ~p", [TriggerModule, JobName]),
         case erlang:apply(TriggerModule, start, [Job, Config]) of
           {start_build, Reason, Description} ->
             BuildDescription = ?BUILD:describe_build(

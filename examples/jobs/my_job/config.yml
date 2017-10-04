@@ -8,8 +8,9 @@ triggers:
     expression: "*/1 * * * *"
     executable: {{git_location}}
     repository: {{repo}}
+    source_directory: {{src_dir}}
   cron:
-    expression: "*/1 * * * *"
+    expression: "*/1 23 * * *"
 phases:
   fetch_source:
     main:

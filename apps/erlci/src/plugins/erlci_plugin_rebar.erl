@@ -125,7 +125,7 @@ handle_info(run, State = #{phase := generate_doc}) ->
   Executable = ?YAML:field(Config, "executable"),
   SourceDir = ?YAML:field(Config, "source_directory"),
   ExecInfo = #{
-    cwd => filename:join([?BUILD:home(Build), SourceDir]),
+    cwd => ?BUILD:filename(Build, SourceDir),
     command => Executable,
     args => ["edoc"],
     env => #{}
@@ -142,7 +142,7 @@ handle_info(run, State = #{phase := static_analysis}) ->
   SourceDir = ?YAML:field(Config, "source_directory"),
   Task = ?YAML:field(Config, "task"),
   ExecInfo = #{
-    cwd => filename:join([?BUILD:home(Build), SourceDir]),
+    cwd => ?BUILD:filename(Build, SourceDir),
     command => Executable,
     args => [Task],
     env => #{}
@@ -158,7 +158,7 @@ handle_info(run, State = #{phase := fetch_dependencies}) ->
   Executable = ?YAML:field(Config, "executable"),
   SourceDir = ?YAML:field(Config, "source_directory"),
   ExecInfo = #{
-    cwd => filename:join([?BUILD:home(Build), SourceDir]),
+    cwd => ?BUILD:filename(Build, SourceDir),
     command => Executable,
     args => ["get-deps"],
     env => #{}

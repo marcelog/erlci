@@ -51,11 +51,16 @@
 
 -export([create/2, describe_build/4]).
 -export([log/4]).
--export([home/1, number/1, job/1, description/1]).
+-export([home/1, number/1, job/1, description/1, filename/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Public API.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% @doc Returns a path to a file inside the build's workspace.
+-spec filename(erlci_build(), erlci_filename()) -> erlci_path().
+filename(Build, Filename) ->
+  filename:join([home(Build), Filename]).
+
 %% @doc Returns the workspace/home directory for the given build.
 -spec home(erlci_build()) -> erlci_directory().
 home(Build) ->
@@ -119,9 +124,9 @@ create(Job, BuildDescription) ->
 
 %% @doc Returns a build description, needed to create a build.
 -spec describe_build(
-  string(),
-  string(),
-  string(),
+  erlci_build_actor(),
+  erlci_build_actor_name(),
+  erlci_build_description_text(),
   string()
 ) -> erlci_build_description().
 describe_build(StartedByActor, StartedByName, Reason, Description) ->

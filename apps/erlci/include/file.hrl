@@ -3,5 +3,6 @@
 
 -type erlci_filename() :: string().
 -type erlci_directory() :: string().
+-type erlci_path() :: erlci_filename() | erlci_directory().
 
 -endif.

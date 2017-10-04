@@ -7,6 +7,8 @@
 
 -type erlci_trigger() :: map().
 
--type erlci_trigger_result() :: ok.
+-type erlci_trigger_result() :: skip | {
+  start_build, erlci_build_reason(), erlci_build_description_text()
+}.
 
 -endif.
